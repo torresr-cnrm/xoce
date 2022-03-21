@@ -1,0 +1,8 @@
+ipython==8.0.1
+jupyter==1.0.0
+matplotlib==3.5.1
+netCDF4==1.5.8
+notebook==6.4.8
+numpy==1.22.2
+xarray==0.21.1
+gsw==3.4.0

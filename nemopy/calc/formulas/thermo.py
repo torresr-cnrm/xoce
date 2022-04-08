@@ -5,12 +5,18 @@ import gsw
 import numpy as np
 import xarray as xr
 
-from .constants import g, p0, rho0
+from nemopy.calc.formulas.constants import CONST
 
 
-def density(ds):
-    p = p0 + g*rho0*ds['depth']
-    ds['rho'] = gsw.density.rho(ds['so']*10**-3, ds['bigthetao'], p/10**4)
+class rho:
+    long_name = 'In-situ density'
+    standard_name = 'density'
+    units = 'kg m-3'
+    unit_long = 'kilogrammes per cube meter'
+
+    def calculate(so, bigthetao, depth):
+        p = CONST.p0 + CONST.g*CONST.rho0*depth
+        return gsw.density.rho(so*10**-3, bigthetao, p/10**4)
 
 
 def bigthetao(ds):
@@ -22,13 +28,13 @@ def eos_ts_coefs(ds):
     from NEMO v3.6
     """
     # default value: Vallis 2006
-    a0      = 1.6550e-1    # thermal expansion coeff. 
-    b0      = 7.6554e-1    # saline  expansion coeff. 
-    lambda1 = 5.9520e-2    # cabbeling coeff. in T^2        
-    lambda2 = 5.4914e-4    # cabbeling coeff. in S^2        
-    mu1     = 1.4970e-4    # thermobaric coeff. in T  
-    mu2     = 1.1090e-5    # thermobaric coeff. in S  
-    nu      = 2.4341e-3    # cabbeling coeff. in theta*salt  
+    a0      = 1.6550e-1    # thermal expansion coeff.
+    b0      = 7.6554e-1    # saline  expansion coeff.
+    lambda1 = 5.9520e-2    # cabbeling coeff. in T^2
+    lambda2 = 5.4914e-4    # cabbeling coeff. in S^2
+    mu1     = 1.4970e-4    # thermobaric coeff. in T
+    mu2     = 1.1090e-5    # thermobaric coeff. in S
+    nu      = 2.4341e-3    # cabbeling coeff. in theta*salt
     
     rho0  = 1026.
     teos  = ds['thetao'] - 10.   # pot. temperature anomaly (t-T0)
@@ -64,13 +70,13 @@ def N2(ds, mesh):
     alpha = (1 - rw) * A[1:] + (rwd * A[:-1]).data
     beta  = (1 - rw) * B[1:] + (rwd * B[:-1]).data
 
-    n2[1:] = g * (alpha * (T[:-1].data-T[1:]) - beta * (S[:-1].data-S[1:])) / (mesh['e3t'][1:])
+    n2[1:] = CONST.g * (alpha * (T[:-1].data-T[1:]) - beta * (S[:-1].data-S[1:])) / (mesh['e3t'][1:])
 
     ds['N2'] = n2
 
 
 def Nsquared(ds):
-    p = p0 + g*rho0*ds['depth']
+    p = CONST.p0 + CONST.g*CONST.rho0*ds['depth']
     lat = ds['latitude']
 
     # eventually reshape p-array and lat-array

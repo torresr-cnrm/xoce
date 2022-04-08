@@ -2,20 +2,29 @@
 Mechanical energy computation in [J/kg] or [m2/s2]
 """
 
-from .constants import g
+from nemopy.calc.formulas.constants import CONST
 
 
-def kinetic_energy(ds):
-    if 'wo' not in ds:
-        ke = 0.5*(ds['uo']**2. + ds['vo']**2.)
-    else:
-        ke = 0.5*(ds['uo']**2. + ds['vo']**2., ds['wo']**2.)
+class ke:
+    long_name = 'kinetic energy'
+    standard_name = 'kinetic_energy'
+    units = 'm2 s-2'
 
-    ds['ke'] = ke
+    def calculate(uo, vo, wo=None):
+        if wo is None:
+            ke = 0.5*(uo**2. + vo**2.)
+        else:
+            ke = 0.5*(uo**2. + vo**2. + wo**2.)
+        
+        return ke
 
 
-def potential_energy(ds):
-    pe = -0.5*g/ds['N2'] * ds['rho']**2.
-    
-    ds['pe'] = pe
+class pe:
+    long_name = 'potential energy'
+    standard_name = 'potential_energy'
+    units = ''
+
+    def calculate(rho, N2):
+        return -0.5*CONST.g/N2 * rho**2.
+
     

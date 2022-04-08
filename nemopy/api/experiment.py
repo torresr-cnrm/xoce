@@ -4,6 +4,7 @@
 import numpy as np
 import xarray as xr
 
+from ..calc import CalcManager
 from ..utils.dataset_util import compare_coords
 
 
@@ -15,6 +16,8 @@ class Experiment:
         # protected properties
         self._dataset = xr.Dataset()
         self._mesh = xr.Dataset()
+
+        self._calc = CalcManager(dataset=self)
 
     
     def __getitem__(self, v):
@@ -36,7 +39,7 @@ class Experiment:
         return list(self._dataset.variables) + list(self._mesh.variables)
 
     def calculate(self, var):
-        pass
+        self._calc.calculate(var)
 
     # data loading function
     def load(self, chunks=None):

@@ -16,10 +16,18 @@ class CalcManager:
         self._load_formulas()
 
 
+    @property
+    def functions(self):
+        return list(self._functions.keys())
+
+
     def calculate(self, variable):
         """
         Calculate a variable by its name.
         """
+        if variable in self._dataset.variables:
+            return self._dataset[variable]
+        
         if variable not in self._functions:
             raise Exception("Unknow formula: '{}'".format(variable))
 
@@ -37,7 +45,8 @@ class CalcManager:
             else:
                 args.append(self.calculate(p))
 
-        # use calculate method which is define for all functions
+        # TODO: make a test on arguments shape and dimensions here ?? 
+        # use calculate method which is defined for all functions
         darray = func(*tuple(args))
         
         # finally add variable attrs
@@ -45,8 +54,26 @@ class CalcManager:
             if not attr.startswith('__') and attr != 'calculate':
                 darray.attrs[attr] = clss.__dict__[attr]
         self._dataset[variable] = darray
-        
 
+        return darray
+
+
+    def is_calculable(self, variable):
+        """
+        Check if a variable is calculable. 
+        """
+        return True
+
+
+    def feed(self, **kargs):
+        """
+        Add new variables in dataset.
+        """
+        for k in kargs:
+            # TODO: make a test if dimensions are OK with current dataset
+            self._dataset[k] = kargs[k]
+
+    
     def _load_formulas(self):
         """
         Loop over all files in '../formulas' directory in order

@@ -1,4 +1,5 @@
 from .filters import AverageFilter
+from .integration import Integral
 from .selectors import BoxClipper
 
 

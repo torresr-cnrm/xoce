@@ -6,9 +6,9 @@ from nemopy.calc.formulas.constants import CONST
 
 
 class ke:
-    long_name = 'kinetic energy'
-    standard_name = 'kinetic_energy'
-    units = 'm2 s-2'
+    long_name = 'kinetic energy per unit of volume'
+    standard_name = 'kinetic_energy_vol'
+    units = 'kg m-1 s-2'
 
     def calculate(uo, vo, wo=None):
         if wo is None:
@@ -16,15 +16,15 @@ class ke:
         else:
             ke = 0.5*(uo**2. + vo**2. + wo**2.)
         
-        return ke
+        return CONST.rho0*ke
 
 
 class pe:
-    long_name = 'potential energy'
-    standard_name = 'potential_energy'
-    units = ''
+    long_name = 'potential energy per unit of volume'
+    standard_name = 'potential_energy_vol'
+    units = 'kg m-1 s-2'
 
     def calculate(rho, N2):
-        return -0.5*CONST.g/N2 * rho**2.
+        return -0.5*CONST.g**2/(CONST.rho0*N2) * rho**2.
 
     

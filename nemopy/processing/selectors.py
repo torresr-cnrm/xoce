@@ -32,7 +32,7 @@ class BoxClipper(Processing):
         for dim in self.box:
             if dim not in ds.coords:
                 raise Exception("BoxClipper error: '{}' ".format(dim) + 
-                            "is not in dataset coordinates ()".format(list(ds.coords)))
+                            "is not in dataset coordinates {}".format(list(ds.coords)))
 
         # coordinates selection
         coords = {c: ds.coords[c] for c in ds.coords if c not in self.box}

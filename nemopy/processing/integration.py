@@ -16,9 +16,6 @@ class Integral(Processing):
                 'default': list()},
         "variables": {'type': list,
                       'default': list()},
-        "method": {'type': str,
-                   'default': 'arithmetic',
-                   'restricted': ['arithmetic', 'volume']}
     }
 
     def __init__(self, dataset=None, **kargs):
@@ -33,16 +30,33 @@ class Integral(Processing):
 
         for dim in self.dims :
             if dim not in ds.coords:
-                raise Exception("BoxClipper error: '{}' ".format(dim) + 
-                            "is not in dataset coordinates ()".format(list(ds.coords)))
+                raise Exception("Integral error: '{}' ".format(dim) + 
+                            "is not in dataset coordinates {}".format(list(ds.coords)))
 
         for var in self.variables :
             if var not in ds.variables:
-                raise Exception("BoxClipper error: '{}' ".format(var) + 
+                raise Exception("Integral error: '{}' ".format(var) + 
                         "is not in dataset coordinates ()".format(list(ds.variables)))
 
-        if self.method == 'volume':
-            pass
+        # coordinates selection
+        coords = {c: ds.coords[c] for c in ds.coords if c not in self.dims}
+        for dim in self.dims:
+            dimval = ds[self.dim]
+            newdim = xr.IndexVariable(dim, [dimval.mean(dim=dim).data])
+            coords.update({dim: newdim})
 
-        return None
+        integrated = xr.Dataset(coords=coords)
+        
+        # sanity check for variables list
+        if not self.variables :
+            variables = [v for v in ds.variables if v not in ds.coords]
+        else:
+            variables = self.variables
+        
+        # processing: integration over all dimensions
+        volcello = ds['volume']
+        for var in variables:
+            integrated[var] = (volcello*ds[var]).sum()
+
+        return integrated
 

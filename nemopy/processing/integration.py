@@ -40,14 +40,14 @@ class Integral(Processing):
 
         # coordinates selection
         coords = {c: ds.coords[c] for c in ds.coords if c not in self.dims}
-        for dim in self.dims:
-            dimval = ds[self.dim]
-            newdim = xr.IndexVariable(dim, [dimval.mean(dim=dim).data])
-            coords.update({dim: newdim})
-
         integrated = xr.Dataset(coords=coords)
         
-        # sanity check for variables list
+        # sanity check for dims and variables list
+        if not self.dims:
+            dims = None
+        else:
+            dims = self.dims
+
         if not self.variables :
             variables = [v for v in ds.variables if v not in ds.coords]
         else:
@@ -56,7 +56,7 @@ class Integral(Processing):
         # processing: integration over all dimensions
         volcello = ds['volume']
         for var in variables:
-            integrated[var] = (volcello*ds[var]).sum()
+            integrated[var] = (volcello*ds[var]).sum(dim=dims)
 
         return integrated
 

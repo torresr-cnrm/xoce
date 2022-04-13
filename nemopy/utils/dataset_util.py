@@ -32,3 +32,37 @@ def merge_coordinates(dataset, coords, diff='relative', tol=1e-6):
                 code = -1
 
     return code
+
+
+def array_diff(da, dim='time', method='forward'):
+    """
+    Make a diff operation under a DataArray object along one dimension.
+    The method argument is set to 'forward' differentiation.
+    """
+    if method not in ['forward', 'backward']:
+        raise Exception("Unknown method '{}'".format(method))
+    
+    arr = xr.full_like(da, np.nan)
+
+    if method == 'forward':
+        dab = da.isel({dim: slice(0,-1,1)})
+        daa = da.isel({dim: slice(1,None,1)})
+        daa.coords[dim] = dab.coords[dim]
+
+        dif = daa - dab
+        lst = dif.isel({dim: [-1]})
+        lst.coords[dim] = [da.coords[dim][-1]]
+        arr = xr.concat([dif, lst], dim=dim)
+
+    elif method == 'backward':
+        dab = da.isel({dim: slice(0,-1,1)})
+        daa = da.isel({dim: slice(1,None,1)})
+        dab.coords[dim] = daa.coords[dim]
+
+        dif = daa - dab
+        fst = dif.isel({dim: [0]})
+        fst.coords[dim] = [da.coords[dim][0]]
+        arr = xr.concat([fst, dif], dim=dim)
+
+    return arr
+

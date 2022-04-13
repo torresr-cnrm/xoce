@@ -7,4 +7,4 @@ class CONST:
 
     # constant thermodynamics
     p0   = 101325.0
-    rho0 = 1023.6
+    rho0 = 1026.0

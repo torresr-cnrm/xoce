@@ -6,6 +6,7 @@ import numpy as np
 import xarray as xr
 
 from nemopy.calc.formulas.constants import CONST
+from nemopy.utils.dataset_util import array_diff
 
 
 class rho:
@@ -41,21 +42,44 @@ class N2:
     def calculate(thetao, so, depth, e3t):
         T = thetao
         S = so
-        d = depth
 
         n2 = xr.full_like(T, 1)
-        rw = (e3t[1:])/(d[:-1].data-d[1:])
-        rwd = rw.data
+        n2 = xr.where(np.isnan(T), np.nan, n2)
+        rw = (0.5*e3t)/array_diff(depth, dim='depth', method='backward')
 
         A, B = N2.eos_ts_coefs(thetao, so, depth)
-        while len(rwd.shape) < len(A.shape):
-            rwd = rwd.reshape(list(rwd.shape)+[1])
 
-        alpha = (1 - rw) * A[1:] + (rwd * A[:-1]).data
-        beta  = (1 - rw) * B[1:] + (rwd * B[:-1]).data
+        # reshape rw to match EOS coefs dimensions (create a function for this ?)
+        index = list()
+        for co in A.dims:
+            if co not in rw.dims:
+                rw = rw.expand_dims({co: A[co].size})
+            if co == 'depth':
+                index.append(slice(1,None,1))
+            else:
+                index.append(slice(0,None,1))
+        
+        # select thermal/haline coefficient and change 'depth' coordinates
+        A1 = A.isel({'depth': slice(0,-1,1)})
+        A1.coords['depth'] = A.coords['depth'][1:]
+        A1 = xr.concat([A.isel({'depth': [0]}), A1], dim='depth')
 
-        n2[1:] = CONST.g * (alpha * (T[:-1].data-T[1:]) - beta * (S[:-1].data-S[1:]))
-        n2[1:] /= (e3t[1:])
+        B1 = B.isel({'depth': slice(0,-1,1)})
+        B1.coords['depth'] = B.coords['depth'][1:]
+        B1 = xr.concat([B.isel({'depth': [0]}), B1], dim='depth')
+
+        alpha = (1 - rw) * A1 + (rw * A)
+        beta  = (1 - rw) * B1 + (rw * B)
+
+        dT = array_diff(T, dim='depth', method='backward')
+        dS = array_diff(S, dim='depth', method='backward')
+
+        # calculate n2 for all depth except surface (index 0)
+        bn2 = CONST.g * ( alpha * dT - beta * dS) / e3t
+        
+        # filter top / bottom boundaries
+        cbnds = (n2['depth'] > n2['depth'][0]) & (n2['depth'] < n2['depth'][-1])
+        n2 = xr.where(cbnds, bn2, 0)
 
         return n2
 

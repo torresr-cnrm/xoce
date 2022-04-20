@@ -24,7 +24,7 @@ class pe:
     standard_name = 'potential_energy_vol'
     units = 'kg m-1 s-2'
 
-    def calculate(rho, N2):
-        return -0.5*CONST.g**2/(CONST.rho0*N2) * rho**2.
+    def calculate(rho, N2, rho_star):
+        return -0.5*CONST.g**2/(CONST.rho0*N2) * (rho_star)**2.
 
     

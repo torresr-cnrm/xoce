@@ -3,10 +3,10 @@
 
 import xarray as xr
 
-from .processing import Processing
+from ..api.generic import NemopyObject
 
 
-class Integral(Processing):
+class Integral(NemopyObject):
     """
     Integration of some datas over one specified dimension 
     or the whole space.
@@ -19,7 +19,7 @@ class Integral(Processing):
     }
 
     def __init__(self, dataset=None, **kargs):
-        Processing.__init__(self, dataset)
+        NemopyObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)
@@ -39,7 +39,9 @@ class Integral(Processing):
                         "is not in dataset coordinates ()".format(list(ds.variables)))
 
         # coordinates selection
-        coords = {c: ds.coords[c] for c in ds.coords if c not in self.dims}
+        coords = dict()
+        if self.dims:
+            coords = {c: ds.coords[c] for c in ds.coords if c not in self.dims}
         integrated = xr.Dataset(coords=coords)
         
         # sanity check for dims and variables list

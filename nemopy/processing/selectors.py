@@ -3,10 +3,10 @@
 
 import xarray as xr
 
-from .processing import Processing
+from ..api.generic import NemopyObject
 
 
-class BoxClipper(Processing):
+class BoxClipper(NemopyObject):
     """
     Box selection regarding some box on dataset coordinates. 
     """
@@ -20,7 +20,7 @@ class BoxClipper(Processing):
     }
 
     def __init__(self, dataset=None, **kargs):
-        Processing.__init__(self, dataset)
+        NemopyObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)

@@ -1,9 +1,11 @@
 """
 """
 
-class Processing:
+
+class NemopyObject:
     """
-    Generic abstract class for processing xarray Dataset.
+    Generic abstract class for interfacing nemopy objects as 
+    processing and io classes.
     """
     _Parameters = dict()
 
@@ -13,7 +15,7 @@ class Processing:
     @property
     def dataset(self):
         return self._dataset
-
+    
     @dataset.setter
     def dataset(self, value):
         self._dataset = value

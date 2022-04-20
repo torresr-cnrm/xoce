@@ -3,10 +3,10 @@
 
 import xarray as xr
 
-from .processing import Processing
+from ..api.generic import NemopyObject
 
 
-class AverageFilter(Processing):
+class AverageFilter(NemopyObject):
     """
     Filtering Dataset by averaging all variables along 
     a specified dimension.
@@ -21,7 +21,7 @@ class AverageFilter(Processing):
     }
 
     def __init__(self, dataset=None, **kargs):
-        Processing.__init__(self, dataset)
+        NemopyObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)

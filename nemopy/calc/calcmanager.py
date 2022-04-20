@@ -72,6 +72,7 @@ class CalcManager:
         """
         for k in kargs:
             # TODO: make a test if dimensions are OK with current dataset
+            # what about if k already in dataset ? 
             self._dataset[k] = kargs[k]
 
     

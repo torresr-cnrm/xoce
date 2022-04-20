@@ -20,6 +20,16 @@ class rho:
         return gsw.density.rho(so*10**-3, bigthetao, p/10**4)
 
 
+class rho_star:
+    long_name = 'Density anomalies from a reference value'
+    standard_name = 'density_an'
+    units = 'kg m-3'
+    unit_long = 'kilogrammes per cube meter'
+
+    def calculate(rho, rho_ref=CONST.rho0):
+        return rho - rho_ref
+
+
 class bigthetao:
     long_name = 'Conservative temperature'
     standard_name = 'bigthetao'
@@ -47,7 +57,7 @@ class N2:
         n2 = xr.where(np.isnan(T), np.nan, n2)
         rw = (0.5*e3t)/array_diff(depth, dim='depth', method='backward')
 
-        A, B = N2.eos_ts_coefs(thetao, so, depth)
+        A, B = N2.__eos_ts_coefs(thetao, so, depth)
 
         # reshape rw to match EOS coefs dimensions (create a function for this ?)
         index = list()
@@ -78,13 +88,14 @@ class N2:
         bn2 = CONST.g * ( alpha * dT - beta * dS) / e3t
         
         # filter top / bottom boundaries
-        cbnds = (n2['depth'] > n2['depth'][0]) & (n2['depth'] < n2['depth'][-1])
+        # -- backward : need to filter the bottom
+        cbnds = (n2['depth'] < n2['depth'][-1])
         n2 = xr.where(cbnds, bn2, 0)
 
         return n2
 
 
-    def eos_ts_coefs(thetao, so, depth):
+    def __eos_ts_coefs(thetao, so, depth):
         """
         from NEMO v3.6
         """
@@ -97,15 +108,14 @@ class N2:
         mu2     = 1.1090e-5    # thermobaric coeff. in S
         nu      = 2.4341e-3    # cabbeling coeff. in theta*salt
         
-        rho0  = 1026.
         teos  = thetao - 10.   # pot. temperature anomaly (t-T0)
         seos  = so - 35.       # abs. salinity anomaly (s-S0)
 
         zn    = a0 * ( 1. + lambda1*teos + mu1*depth ) + nu*seos
-        za = zn * (1/rho0)
+        za = zn * (1/CONST.rho0)
         
         zn    = b0 * ( 1. - lambda2*seos - mu2*depth ) - nu*teos
-        zb  = zn * (1/rho0)
+        zb  = zn * (1/CONST.rho0)
         
         return za, zb
 

@@ -63,6 +63,7 @@ class H5pyWriter(NemopyObject):
             for at in ds.attrs:
                 grp.attrs[at] = ds.attrs[at]
 
+            print('dataset created')
             # create coordinates subgroup
             crds = grp.create_group('coordinates')
             for co in ds.coords:
@@ -77,15 +78,20 @@ class H5pyWriter(NemopyObject):
                 for at in arr.attrs:
                     var.attrs[at] = arr.attrs[at]
 
+            print('coordinates created')
             # create variables subgroup
             vrs = grp.create_group('variables')
             for v in ds.variables:
+                print(v)
+                print(ds.variables[v].shape)
                 if v in ds.coords:
                     continue
                 arr = ds.variables[v]
-                var = vrs.create_dataset(v, arr.shape, arr.dtype, arr.data)
+                nda = arr.data.compute()
+                var = vrs.create_dataset(v, arr.shape, arr.dtype, nda)
                 for at in arr.attrs:
                     var.attrs[at] = arr.attrs[at]
-        
+
+            print('variables created')
         f.close()
 

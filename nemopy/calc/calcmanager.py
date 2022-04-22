@@ -29,7 +29,7 @@ class CalcManager:
             return self._dataset[variable]
         
         if variable not in self._functions:
-            raise Exception("Unknow formula: '{}'. ".format(variable) + 
+            raise Exception("Unknown formula: '{}'. ".format(variable) + 
                             "Functions are {}".format(list(self._functions.keys())))
 
         # get class, function and its signature

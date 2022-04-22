@@ -28,12 +28,12 @@ class Integral(NemopyObject):
     def execute(self):
         ds = self.dataset
 
-        for dim in self.dims :
+        for dim in self.dims:
             if dim not in ds.coords:
                 raise Exception("Integral error: '{}' ".format(dim) + 
                             "is not in dataset coordinates {}".format(list(ds.coords)))
 
-        for var in self.variables :
+        for var in self.variables:
             if var not in ds.variables:
                 raise Exception("Integral error: '{}' ".format(var) + 
                         "is not in dataset coordinates ()".format(list(ds.variables)))

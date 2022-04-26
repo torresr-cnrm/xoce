@@ -4,6 +4,8 @@
 import h5py
 import os
 
+from numpy import array_repr
+
 from ..api.generic import NemopyObject
 
 
@@ -87,8 +89,8 @@ class H5pyWriter(NemopyObject):
                 if v in ds.coords:
                     continue
                 arr = ds.variables[v]
-                nda = arr.data.compute()
-                var = vrs.create_dataset(v, arr.shape, arr.dtype, nda)
+                # nda = arr.data.compute()
+                var = vrs.create_dataset(v, arr.shape, arr.dtype, arr.data)
                 for at in arr.attrs:
                     var.attrs[at] = arr.attrs[at]
 

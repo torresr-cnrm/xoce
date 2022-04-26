@@ -55,7 +55,16 @@ class N2:
 
         n2 = xr.full_like(T, 1)
         n2 = xr.where(np.isnan(T), np.nan, n2)
-        rw = (0.5*e3t)/array_diff(depth, dim='depth', method='backward')
+        n2.name = 'N2'
+
+        rw = xr.full_like(T, 1)
+        rw.name = 'rw'
+        rwd = (0.5*e3t)/array_diff(depth, dim='depth', method='backward')
+
+        for k in range(len(rwd)):
+            slicer = [slice(0, None, 1) for di in rw.dims]
+            slicer[rw.dims.index('depth')] = slice(k, k+1, 1)
+            rw[tuple(slicer)] = rwd[k]
 
         A, B = N2.__eos_ts_coefs(thetao, so, depth)
 

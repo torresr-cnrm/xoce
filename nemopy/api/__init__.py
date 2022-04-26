@@ -1,1 +1,8 @@
-from .experiment import Experiment
+
+_VARS_NAME = {
+    "CMIPExperiment": {
+        'depth': 'lev',
+        'latitude': 'lat',
+        'longitude': 'lon',
+    },
+}

@@ -1,8 +1,9 @@
 
 _VARS_NAME = {
     "CMIPExperiment": {
-        'depth': 'lev',
-        'latitude': 'lat',
-        'longitude': 'lon',
+        'z': 'depth',
+        'lev': 'depth',
+        'lat': 'latitude',
+        'lon': 'longitude',
     },
 }

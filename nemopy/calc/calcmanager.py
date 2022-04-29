@@ -49,8 +49,9 @@ class CalcManager:
         # TODO: make a test on arguments shape and dimensions here ?? 
         # use calculate method which is defined for all functions
         darray = func(*tuple(args))
-        
-        # finally add variable attrs
+
+        # finally change name and attributes
+        darray.name = variable
         for attr in clss.__dict__:
             if not attr.startswith('__') and attr != 'calculate':
                 darray.attrs[attr] = clss.__dict__[attr]

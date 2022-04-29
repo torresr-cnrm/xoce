@@ -10,11 +10,11 @@ class ke:
     standard_name = 'kinetic_energy_vol'
     units = 'kg m-1 s-2'
 
-    def calculate(uo, vo, wo=None):
+    def calculate(uo, vo, wo=None, rho0=CONST.rho0):
         if wo is None:
-            ke = 0.5*(uo**2. + vo**2.)
+            ke = 0.5*rho0*(uo**2. + vo**2.)
         else:
-            ke = 0.5*(uo**2. + vo**2. + wo**2.)
+            ke = 0.5*rho0*(uo**2. + vo**2. + wo**2.)
         
         return CONST.rho0*ke
 

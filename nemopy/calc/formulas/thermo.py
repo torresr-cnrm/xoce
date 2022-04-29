@@ -61,8 +61,14 @@ class N2:
         rw.name = 'rw'
         rwd = (0.5*e3t)/array_diff(depth, dim='depth', method='backward')
 
+        # filtering unwanted dim of len 1
+        while 1 in rwd.shape:
+            dim = rwd.dims[rwd.shape.index(1)]
+            rwd = rwd.isel({dim: 0})
+
+        # fill the rw array
         for k in range(len(rwd)):
-            slicer = [slice(0, None, 1) for di in rw.dims]
+            slicer = [slice(0, None, 1)] * len(rw.dims)
             slicer[rw.dims.index('depth')] = slice(k, k+1, 1)
             rw[tuple(slicer)] = rwd[k]
 

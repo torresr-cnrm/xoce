@@ -89,7 +89,8 @@ class CMIPExperiment:
         self._coords = dict()
         self._dims = dict()
         self._drs  = dict()         # data referece syntax: variableID_tableID_ .. .nc
-        self._arrays = dict()       # link variable names and DataArray already openned 
+        self._arrays = dict()       # link variable names and DataArray already openned
+        self._chunks = None         # dask chunks to split large datasets
 
     
     def __getitem__(self, var):
@@ -97,9 +98,10 @@ class CMIPExperiment:
             if var in self._arrays:
                 return self._arrays[var]
             elif var in self._mesh.variables:
-                return self._mesh[var]
+                self.add_variable(var, self._mesh[var])
+                return self._arrays[var]
             else:
-                self.load_variable(var)
+                self.load_variable(var, chunks=self._chunks)
                 return self._arrays[var]
         else:
             if self._calc.is_calculable(var):
@@ -111,7 +113,7 @@ class CMIPExperiment:
     def __setitem__(self, var, values):
         # TODO: add test on dimensions
         if isinstance(values, xr.DataArray):
-            self._arrays[var] = values
+            self.add_variable(var, values)
         else:
             raise TypeError("Values should be a DataArray not {}".format(type(values)))
 
@@ -129,20 +131,35 @@ class CMIPExperiment:
         lvars += self._drs.get('variable_id', [])
         return lvars
         
-    def add_variable(self, var, arr):
-        if var in list(_VARS_NAME[type(self).__name__].values()):
-            indvar = list(_VARS_NAME[type(self).__name__].values()).index(var)
-            newvar = list(_VARS_NAME[type(self).__name__].keys())[indvar]
+    def add_variable(self, var, arr, rename_dims=True):
+        if var in list(_VARS_NAME[type(self).__name__].keys()):
+            newvar = _VARS_NAME[type(self).__name__][var]
         else:
             newvar = var
+
+        if rename_dims:
+            rename_dict = dict()
+            for vn in _VARS_NAME[type(self).__name__]:
+                if vn in list(arr.dims) + list(arr.coords):
+                    rename_dict[vn] = _VARS_NAME[type(self).__name__][vn]
+            arr = arr.rename(rename_dict)
+
+            if arr.name in _VARS_NAME[type(self).__name__]:
+                arr.name = _VARS_NAME[type(self).__name__][arr.name]
         
         self._arrays[newvar] = arr
+        
+        return newvar, arr
+
 
     def calculate(self, var):
         return self._calc.calculate(var)
 
     def load(self, chunks=None):
+        self._chunks = chunks
         self._drs = load_cmip6_output(self.path)
+        self._mesh = xr.open_dataset(self.fmesh)
+
 
     def load_variable(self, var, chunks=None):
         if not self._drs :
@@ -163,8 +180,8 @@ class CMIPExperiment:
         
         for c in ds.coords:
             if c not in self.coords:
-                self.add_variable(c, ds.coords[c])
-                self._coords[c] = ds.coords[c]
+                newc, datc = self.add_variable(c, ds.coords[c], rename_dims=True)
+                self._coords[newc] = datc
         
         # finally link DataArray in a container
         self.add_variable(var, ds[var])

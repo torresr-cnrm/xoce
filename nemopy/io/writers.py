@@ -4,8 +4,6 @@
 import h5py
 import os
 
-from numpy import array_repr
-
 from ..api.generic import NemopyObject
 
 
@@ -33,6 +31,8 @@ class H5pyWriter(NemopyObject):
                  'default': None},
         "expname": {'type': str,
                     'default': 'experiement'},
+        "variables": {'type': list,
+                    'default': list()},
     }
 
     def __init__(self, dataset=None, **kargs):
@@ -65,13 +65,16 @@ class H5pyWriter(NemopyObject):
             for at in ds.attrs:
                 grp.attrs[at] = ds.attrs[at]
 
-            print('dataset created')
             # create coordinates subgroup
             crds = grp.create_group('coordinates')
             for co in ds.coords:
                 arr = ds.coords[co]
-                if co in ['time']:
-                    dtype = h5py.opaque_dtype(arr.dtype)
+                if co in ['time', 't']:
+                    if arr.dtype == 'O':
+                        arr[co] = arr.indexes[co].to_datetimeindex()
+                        dtype = h5py.opaque_dtype(arr[co].dtype)
+                    else:
+                        dtype = h5py.opaque_dtype(arr.dtype)
                     datas = arr.data.astype(dtype)
                 else:
                     dtype = arr.dtype
@@ -80,20 +83,17 @@ class H5pyWriter(NemopyObject):
                 for at in arr.attrs:
                     var.attrs[at] = arr.attrs[at]
 
-            print('coordinates created')
             # create variables subgroup
             vrs = grp.create_group('variables')
             for v in ds.variables:
-                print(v)
-                print(ds.variables[v].shape)
-                if v in ds.coords:
-                    continue
-                arr = ds.variables[v]
-                # nda = arr.data.compute()
-                var = vrs.create_dataset(v, arr.shape, arr.dtype, arr.data)
-                for at in arr.attrs:
-                    var.attrs[at] = arr.attrs[at]
+                if not self.variables or v in self.variables:
+                    if v in ds.coords:
+                        continue
+                    arr = ds.variables[v]
+                    # nda = arr.data.compute()
+                    var = vrs.create_dataset(v, arr.shape, arr.dtype, arr.data)
+                    for at in arr.attrs:
+                        var.attrs[at] = arr.attrs[at]
 
-            print('variables created')
         f.close()
 

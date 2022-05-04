@@ -1,6 +1,7 @@
 """
 """
 
+import numpy as np
 import xarray as xr
 
 from ..api.generic import NemopyObject
@@ -58,7 +59,11 @@ class Integral(NemopyObject):
         # processing: integration over all dimensions
         volcello = ds['volume']
         for var in variables:
-            integrated[var] = (volcello*ds[var]).sum(dim=dims)
+            # keep nan to get masked arrays
+            vals  = (volcello*ds[var]).sum(dim=dims)
+            conds = np.isnan(ds[var].sum(dim=dims, skipna=False))
+            conds = conds & (ds[var].sum(dim=dims, skipna=True) == 0.)
+            integrated[var] = xr.where(conds, np.nan, vals)
 
         return integrated
 

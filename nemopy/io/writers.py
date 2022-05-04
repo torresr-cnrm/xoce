@@ -33,6 +33,8 @@ class H5pyWriter(NemopyObject):
                     'default': 'experiement'},
         "variables": {'type': list,
                     'default': list()},
+        "reduce_mem": {'type': bool,
+                       'default': False},
     }
 
     def __init__(self, dataset=None, **kargs):
@@ -65,9 +67,10 @@ class H5pyWriter(NemopyObject):
             for at in ds.attrs:
                 grp.attrs[at] = ds.attrs[at]
 
-            # create coordinates subgroup
-            crds = grp.create_group('coordinates')
+            # create coordinates
             for co in ds.coords:
+                if co in ds.dims:
+                    continue
                 arr = ds.coords[co]
                 if co in ['time', 't']:
                     if arr.dtype == 'O':
@@ -79,21 +82,58 @@ class H5pyWriter(NemopyObject):
                 else:
                     dtype = arr.dtype
                     datas = arr.data
-                var = crds.create_dataset(co, arr.shape, dtype, datas)
+                var = grp.create_dataset(co, arr.shape, dtype, datas)
                 for at in arr.attrs:
                     var.attrs[at] = arr.attrs[at]
-
-            # create variables subgroup
-            vrs = grp.create_group('variables')
+                
+                # attach scale for each dimension
+                for ind, dim in enumerate(ds[co].dims):
+                    vdim = self._write_dim(dim, ds[co][dim], grp)
+                    var.dims[ind].attach_scale(vdim)
+                
+            # create variables
             for v in ds.variables:
                 if not self.variables or v in self.variables:
                     if v in ds.coords:
                         continue
+
                     arr = ds.variables[v]
-                    # nda = arr.data.compute()
-                    var = vrs.create_dataset(v, arr.shape, arr.dtype, arr.data)
+                    if self.reduce_mem and arr.dtype == 'float64':
+                        arr = arr.astype('float32')
+                    var = grp.create_dataset(v, arr.shape, arr.dtype, arr.data)
+
                     for at in arr.attrs:
                         var.attrs[at] = arr.attrs[at]
 
+                    # attach scale for each dimension
+                    for ind, dim in enumerate(ds[v].dims):
+                        vdim = self._write_dim(dim, ds[v][dim], grp)
+                        var.dims[ind].attach_scale(vdim)
+
         f.close()
+
+
+    def _write_dim(self, name, array, hdf_group):
+        """Write a new dataset which correspond to a dimension. Note if 
+        the dimension already exists, then the function simply return it.
+        """
+        if name in hdf_group:
+            return hdf_group[name]
+
+        if name in ['time', 't']:
+            if array.dtype == 'O':
+                array[name] = array.indexes[name].to_datetimeindex()
+                dtype = h5py.opaque_dtype(array[name].dtype)
+            else:
+                dtype = h5py.opaque_dtype(array.dtype)
+            datas = array.data.astype(dtype)
+        else:
+            dtype = array.dtype
+            datas = array.data
+        
+        var = hdf_group.create_dataset(name, array.shape, dtype, datas)
+        var.label = name
+        var.make_scale()
+
+        return var
 

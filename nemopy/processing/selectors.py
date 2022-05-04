@@ -54,7 +54,10 @@ class BoxClipper(NemopyObject):
 
         conds = ds == ds
         for dim in self.box:
-            conds  = conds & (ds[dim] >= self.box[dim][0])
+            tmp_conds = (ds[dim] >= self.box[dim][0])
+            if self.box[dim][0] > self.box[dim][1]:
+                tmp_conds = tmp_conds | (ds[dim] <= self.box[dim][1])
+            conds  = conds & tmp_conds
             conds  = conds & (ds[dim] <= self.box[dim][1])
         
         if self.inverse:

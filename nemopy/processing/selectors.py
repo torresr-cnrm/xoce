@@ -126,3 +126,35 @@ class Cutter(NemopyObject):
         selected = xr.Dataset(coords=coords)
         
         return selected
+
+
+class FieldSelector(NemopyObject):
+    """
+    Select variables to return a reduced dataset 
+    """
+    _Parameters = {
+        "variables": {'type': list,
+                      'default': list()},
+    }
+
+    def __init__(self, dataset=None, **kargs):
+        NemopyObject.__init__(self, dataset)
+        
+        # add default processing parameter
+        self._set_default_parameters(**kargs)
+
+    
+    def execute(self):
+        ds = self.dataset
+
+        for var in self.variables:
+            if var not in ds.variables:
+                raise Exception("Integral error: '{}' ".format(var) + 
+                        "is not in dataset coordinates ()".format(list(ds.variables)))
+
+        selected = xr.Dataset(coords=ds.coords)
+        for var in self.variables:
+            selected[var] = ds[var]
+        
+        return selected
+        

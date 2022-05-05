@@ -37,7 +37,7 @@ class Integral(NemopyObject):
         for var in self.variables:
             if var not in ds.variables:
                 raise Exception("Integral error: '{}' ".format(var) + 
-                        "is not in dataset coordinates ()".format(list(ds.variables)))
+                        "is not in dataset variables {}".format(list(ds.variables)))
 
         # coordinates selection
         coords = dict()
@@ -57,10 +57,14 @@ class Integral(NemopyObject):
             variables = self.variables
         
         # processing: integration over all dimensions
-        volcello = ds['volume']
         for var in variables:
+            if 'depth' in ds[var].dims:
+                cell_coefs = ds['volume']
+            else:
+                cell_coefs = ds['surface']
+
             # keep nan to get masked arrays
-            vals  = (volcello*ds[var]).sum(dim=dims)
+            vals  = (cell_coefs*ds[var]).sum(dim=dims)
             conds = np.isnan(ds[var].sum(dim=dims, skipna=False))
             conds = conds & (ds[var].sum(dim=dims, skipna=True) == 0.)
             integrated[var] = xr.where(conds, np.nan, vals)

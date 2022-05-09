@@ -76,7 +76,32 @@ def append_cmip6_variable(fname, cmip_dict, override=False):
             cmip_dict[_cmip_ids[6]].append('')
 
     else:
-        print("Warning: file '{}' does not respect CMIP6 Data Reference Syntax.".format(fname))
+        print("Warning: file '{}' does not respect ".format(fname) + 
+            "CMIP6 Data Reference Syntax.")
+
+
+def extract_cmip6_variables(cmip_ids, cmip_key, cmip_dict, override=False):
+    """
+    Return a reduced dictionary with only wanted variables
+    """
+    if cmip_key not in cmip_dict:
+        raise KeyError("Cannot find key '{}' in cmip dictionary".format(cmip_key))
+
+    indexes = list()
+    for i, val in enumerate(cmip_dict[cmip_key]):
+        if val == cmip_ids or val in cmip_ids:
+            indexes.append(i)
+
+    new_dict = dict()
+    for key in cmip_dict:
+        values = new_dict.setdefault(key, list())
+        for i in indexes:
+            values.append(cmip_dict[key][i])
+    
+    if override:
+        cmip_dict = new_dict
+    
+    return new_dict
 
 
 def get_filename_from_drs(variable_id, cmip_dict):

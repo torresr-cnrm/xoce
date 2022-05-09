@@ -4,6 +4,8 @@
 import numpy as np
 import xarray as xr
 
+from nemopy.processing import Selector
+
 
 def merge_coordinates(dataset, coords, diff='relative', tol=1e-6):
     """
@@ -65,4 +67,36 @@ def array_diff(da, dim='time', method='forward'):
         arr = xr.concat([fst, dif], dim=dim)
 
     return arr
+
+
+def split_dataset(dataset, dim, bounds, drop=False):
+    """
+    Split dataset and return a list of datasets (one for 
+    each band).
+
+    This function is useful for discretizing a dataset
+    along one dimension in order to apply some mathematical 
+    operation on each band (ex: meridonal or zonal average).
+    """
+
+    if dim not in dataset.coords:
+        raise Exception("'{}' is not in dataset coordinates: ".format(dim) +
+                        "{}".format(list(dataset.coords)))
+    
+    if not bounds:
+        return [xr.Dataset(dataset)]
+    
+    # init resulting list
+    res = list()
+    
+    # use box clipper processing with only one dim
+    clipper = Selector('box-clip', dataset=dataset)
+    clipper.set('drop', drop)
+
+    for bnds in bounds:
+        clipper.set('box', {dim: (bnds[0], bnds[1])})
+        clipped = clipper.execute()
+        res.append(clipped)
+
+    return res
 

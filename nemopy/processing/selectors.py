@@ -45,12 +45,19 @@ class BoxClipper(NemopyObject):
                 sliced = ds[dim].where(conds, drop=self.drop)
 
             if len(ds[dim]) > 1:
-                newdim = xr.Variable(ds[dim].dims, sliced.data)
+                newvar = xr.Variable(ds[dim].dims, sliced.data)
             else:
-                newdim = xr.IndexVariable(ds[dim].dims, sliced.data)   
+                newvar = xr.IndexVariable(ds[dim].dims, sliced.data)   
+            newvar.attrs = sliced.attrs
+
+            newdim = xr.DataArray(newvar, coords=sliced.coords)
+            newdim.name = dim
+
             coords.update({dim: newdim})
 
-        selected = xr.Dataset(coords=coords)
+        selected = xr.Dataset()
+        for co in coords:
+            selected.coords[co] = coords[co]
 
         conds = ds == ds
         for dim in self.box:
@@ -78,7 +85,7 @@ class Cutter(NemopyObject):
     made. 
     Usage example: cut at a specified depth to extract a 2D map. 
 
-    TODO: This processing not finished yet.. 
+    TODO: This processing is not finished yet.. 
     """
     _Parameters = {
         "dim": {'type': str,
@@ -149,12 +156,23 @@ class FieldSelector(NemopyObject):
 
         for var in self.variables:
             if var not in ds.variables:
-                raise Exception("Integral error: '{}' ".format(var) + 
+                raise Exception("Selector error: '{}' ".format(var) + 
                         "is not in dataset coordinates ()".format(list(ds.variables)))
 
+        newcoords = list()
         selected = xr.Dataset(coords=ds.coords)
+
         for var in self.variables:
             selected[var] = ds[var]
+
+            for co in selected[var].coords:
+                if co not in newcoords:
+                    newcoords.append(co)
+
+        # filter coordinates in selected variables
+        for co in selected.coords:
+            if co not in newcoords:
+                del selected.coords[co]
         
         return selected
-        
+

@@ -1,13 +1,16 @@
 """
 """
 
+
+import copy
 import os
-from posixpath import abspath
+import numpy as np
 import xarray as xr
 
 from ..calc import CalcManager
 from ..utils.dataset_util import merge_coordinates
-from ..utils.io_util import load_cmip6_output, get_filename_from_drs
+from ..utils.io_util import extract_cmip6_variables, get_filename_from_drs
+from ..utils.io_util import load_cmip6_output
 
 from . import _VARS_NAME
 
@@ -61,7 +64,8 @@ class Experiment:
     # data loading function
     def load(self, chunks=None):
         ds = xr.open_mfdataset(self.path, chunks=chunks)
-        mesh = xr.open_dataset(self.fmesh)
+        if self.fmesh:
+            mesh = xr.open_dataset(self.fmesh)
 
         code_info = merge_coordinates(mesh, ds.coords)
         if code_info == -1:
@@ -130,6 +134,15 @@ class CMIPExperiment:
         lvars = list(self._arrays) + list(self._mesh.variables)
         lvars += self._drs.get('variable_id', [])
         return lvars
+
+    def where(self, conds, other=np.nan, drop=False):
+        dataset = xr.Dataset(coords=self.coords)
+        for v in self.variables:
+            if v not in dataset.dims:
+                dataset[v] = self[v].where(conds, other, drop)
+        
+        return dataset
+            
         
     def add_variable(self, var, arr, rename_dims=True):
         if var in list(_VARS_NAME[type(self).__name__].keys()):
@@ -158,7 +171,8 @@ class CMIPExperiment:
     def load(self, chunks=None):
         self._chunks = chunks
         self._drs = load_cmip6_output(self.path)
-        self._mesh = xr.open_dataset(self.fmesh)
+        if self.fmesh:
+            self._mesh = xr.open_dataset(self.fmesh)
 
 
     def load_variable(self, var, chunks=None):
@@ -185,3 +199,15 @@ class CMIPExperiment:
         
         # finally link DataArray in a container
         self.add_variable(var, ds[var])
+
+
+    def extract_vars(self, variables):
+        """
+        return only a limited variables list stored in its _drs property.
+        """   
+        ndrs = extract_cmip6_variables(variables, 'variable_id', self._drs)
+        experiment = copy.deepcopy(self)
+        experiment._drs = ndrs
+
+        return experiment
+

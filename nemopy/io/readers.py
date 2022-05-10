@@ -63,7 +63,10 @@ class H5pyReader(NemopyObject):
                     dims.append(dname)
 
                 da = xr.DataArray(datas, dims=dims)
-                ds[v] = da
+                try:
+                    ds[v] = da
+                except xr.MergeError:
+                    pass
             
             datasets.append(ds)
         f.close()

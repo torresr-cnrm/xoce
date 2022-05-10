@@ -25,6 +25,7 @@ class CalcManager:
         """
         Calculate a variable by its name.
         """
+
         if variable in self._dataset.variables:
             return self._dataset[variable]
         

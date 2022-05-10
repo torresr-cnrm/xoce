@@ -169,7 +169,7 @@ def get_variable_data(datas, var, mesh=None, filtering=True, lamtol=100,
     return lons, lats, vals
 
 
-def plot_carto(lons, lats, values, xmap, cmap_name='viridis', vbounds=None, norm=None, 
+def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None, 
                 **kargs):
     """ 
     Function to plot a 2D cartography using cartopy.
@@ -188,11 +188,12 @@ def plot_carto(lons, lats, values, xmap, cmap_name='viridis', vbounds=None, norm
         xmap.set_title(title)
 
     # axes for cartography plot
-    cmap = plt.cm.get_cmap(cmap_name)
+    if isinstance(cmap, str):
+        cmap = plt.cm.get_cmap(cmap)
+
     xmap.coastlines()
     xmap.gridlines()
     xmap.background_patch.set_facecolor(bcg)
-
 
     if isinstance(xmap.projection, (ccrs._RectangularProjection, ccrs.Mercator)):
         xmap.set_xticks([-180,-120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())

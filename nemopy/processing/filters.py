@@ -78,6 +78,6 @@ class AverageFilter(NemopyObject):
                     filtered[v] = ds[v] - vmean
                 else:
                     filtered[v] = vmean.expand_dims({'time':1})
-        
+
         return filtered
 

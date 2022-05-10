@@ -108,6 +108,7 @@ class H5pyWriter(NemopyObject):
                     # attach scale for each dimension
                     for ind, dim in enumerate(ds[v].dims):
                         vdim = self._write_dim(dim, ds[v][dim], grp)
+                        var.dims[ind].label = dim
                         var.dims[ind].attach_scale(vdim)
 
         f.close()
@@ -132,7 +133,6 @@ class H5pyWriter(NemopyObject):
             datas = array.data
         
         var = hdf_group.create_dataset(name, array.shape, dtype, datas)
-        var.label = name
         var.make_scale()
 
         return var

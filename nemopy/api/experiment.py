@@ -92,7 +92,7 @@ class CMIPExperiment:
 
         self._coords = dict()
         self._dims = dict()
-        self._drs  = dict()         # data referece syntax: variableID_tableID_ .. .nc
+        self._drs  = dict()         # data reference syntax: variableID_tableID_ .. .nc
         self._arrays = dict()       # link variable names and DataArray already openned
         self._chunks = None         # dask chunks to split large datasets
 

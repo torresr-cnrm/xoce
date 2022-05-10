@@ -87,7 +87,7 @@ def get_variable_data(datas, var, mesh=None, filtering=True, lamtol=100,
         lats = np.array(datas['latitude'])
 
     # get exported variable
-    if datas.name == var:
+    if isinstance(datas, xr.DataArray):
         vals = np.array(datas.data)
     else:
         vals = np.array(datas[var])

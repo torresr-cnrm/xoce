@@ -2,6 +2,7 @@
 Define functions and methods for plotting datas. 
 """
 
+from audioop import reverse
 import numpy as np
 import numpy.ma as ma
 import xarray as xr
@@ -146,6 +147,7 @@ def get_variable_data(datas, var, mesh=None, filtering=True, lamtol=100,
         # 3. final check if there is no other discontinuity
         indgap = np.where(np.abs(lons[:-1, :] - lons[1:, :]) > lamtol)
         inddel = np.unique(indgap[0])
+        inddel[::-1].sort()
 
         for i in inddel:
             lons = np.delete(lons, i+1, axis=0)

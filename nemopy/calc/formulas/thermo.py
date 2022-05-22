@@ -100,14 +100,24 @@ class N2:
         dS = array_diff(S, dim='depth', method='backward')
 
         # calculate n2 for all depth except surface (index 0)
-        bn2 = CONST.g * ( alpha * dT - beta * dS) / e3t
+        bn2 = -1*CONST.g * ( alpha * dT - beta * dS) / e3t
         
         # filter top / bottom boundaries
         # -- backward : need to filter the bottom
-        cbnds = (n2['depth'] < n2['depth'][-1])
-        n2 = xr.where(cbnds, bn2, 0)
+        slicers = [slice(0, None, 1)] * len(bn2.shape)
+        idepth  = bn2.dims.index('depth')
+        slicers[idepth]  = slice(-2, -1, 1)
+        slc = tuple(slicers)
+        
+        bn2[slc] = xr.where(np.isnan(bn2[slc]), np.nan, 0.)
 
-        return n2
+        # -- null value at surface
+        slicers[idepth]  = slice(0, 1, 1)
+        slc = tuple(slicers)
+
+        bn2[slc] = xr.where(np.isnan(bn2[slc]), np.nan, 0.)
+
+        return bn2
 
 
     def __eos_ts_coefs(thetao, so, depth):

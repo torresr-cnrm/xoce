@@ -54,7 +54,7 @@ def array_diff(da, dim='time', method='forward'):
         dif = daa - dab
         lst = dif.isel({dim: [-1]})
         lst.coords[dim] = [da.coords[dim][-1]]
-        arr = xr.concat([dif, lst], dim=dim)
+        arr.data = xr.concat([dif, lst], dim=dim).data
 
     elif method == 'backward':
         dab = da.isel({dim: slice(0,-1,1)})
@@ -64,7 +64,7 @@ def array_diff(da, dim='time', method='forward'):
         dif = daa - dab
         fst = dif.isel({dim: [0]})
         fst.coords[dim] = [da.coords[dim][0]]
-        arr = xr.concat([fst, dif], dim=dim)
+        arr.data = xr.concat([fst, dif], dim=dim).data
 
     return arr
 

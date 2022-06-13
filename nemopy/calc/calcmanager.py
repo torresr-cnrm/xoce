@@ -54,7 +54,10 @@ class CalcManager:
         # finally change name and attributes
         darray.name = variable
         for attr in clss.__dict__:
-            if not attr.startswith('__') and attr != 'calculate':
+            conds = not ( attr.startswith('__') )
+            conds = conds & ( not attr.startswith('_{}'.format(clss.__name__)) )
+            conds = conds & ( attr != 'calculate' )
+            if conds:
                 darray.attrs[attr] = clss.__dict__[attr]
         self._dataset[variable] = darray
 

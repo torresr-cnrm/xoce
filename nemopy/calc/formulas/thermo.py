@@ -21,13 +21,23 @@ class rho:
 
 
 class rho_star:
-    long_name = 'Density anomalies from a reference value'
+    long_name = 'In-situ density anomalies from a reference value'
     standard_name = 'density_an'
     units = 'kg m-3'
     unit_long = 'kilogrammes per cube meter'
 
     def calculate(rho, rho_ref=CONST.rho0):
         return rho - rho_ref
+
+
+class prd:
+    long_name = 'In-situ dimensionless density anomalies from a reference value'
+    standard_name = 'prd'
+    units = ''
+    unit_long = ''
+
+    def calculate(rho, rho_ref=CONST.rho0):
+        return (rho / rho_ref) - 1
 
 
 class bigthetao:
@@ -145,24 +155,158 @@ class N2:
         return za, zb
 
 
+class M2:
+    """
+    Horizontal stratification M^2 
+    """ 
+    long_name = 'Horizontal stratification'
+    standard_name = 'Msquared'
+    units = ''
+    unit_long = ''
 
-# DEPRECIATED - old function for calculation of N2
-def Nsquared(ds):
-    p = CONST.p0 + CONST.g*CONST.rho0*ds['depth']
-    lat = ds['latitude']
+    def calculate(prd, e1t, e2t):
+        grdx = (array_diff(prd, dim='x'))
+        grdy = (array_diff(prd, dim='y'))
 
-    # eventually reshape p-array and lat-array
-    dims  = {d: ds.dims[d] for d in ds.dims if d in ds['so'].dims}
-    
-    ldims = [dims[d] for d in ds['so'].dims if d not in ds['depth'].dims]
-    ldims += [1]
-    p = np.tile(p.data, tuple(ldims))
-    p = p.reshape(ds['so'].shape)
+        m2 = ((grdx/e1t)**2. + (grdy/e2t)**2.)**0.5
+        m2.name = 'M2'
 
-    ldims = [dims[d] for d in ds['so'].dims if d not in ds['latitude'].dims]
-    ldims += [1]
-    lat = np.tile(lat.data, tuple(ldims))
-    lat = lat.reshape(ds['so'].shape)
+        return m2
 
-    ds['Nsquared'] = gsw.stability.Nsquared(ds['so']*10**-3, ds['bigthetao'], p/10**4, lat)
 
+class slpi:
+    """
+    Isopycnal slope (or neutral surfaces slope) in the i-direction
+    from NEMO 3.6 (ldfslp.F90)
+    """
+    long_name = 'Isopycnal slope in the i-direction'
+    standard_name = 'slpi'
+    units = ''
+    unit_long = ''
+
+    def calculate(prd, N2, mlotst, depth, e1t, e3w_1d):
+        gradx = (array_diff(prd, dim='x'))
+        gradx.assign_coords(coords=prd.coords)
+
+        zbw = -0.5/9.81 * N2 * ( 2 * prd + 2. )
+        zai = gradx / e1t    
+
+        zbi = np.minimum(zbw, -100. * np.abs(zai))
+        zbi = np.minimum(zbi, -7e3 / e3w_1d * np.abs(zai))
+            
+        slpi = (zai / (zbi + 1e-20))
+        slpi.name = 'wslpi'
+
+        # special treatment for the mixed layer = slope just bellow the OML * coef
+        nanmask = np.isnan(slpi)
+        omlmask = (mlotst > depth)
+
+        depth = N2['depth'].copy()
+        depth = depth.assign_coords({'depth': np.arange(depth.shape[0])})
+        conds = (depth['depth'] == omlmask.sum('depth'))
+        conds = conds.assign_coords({'depth': N2['depth'].values})
+
+        omln2  = N2.where(conds).sum('depth')
+        omlprd = prd.where(conds).sum('depth')
+
+        zbw = -0.5/9.81 * omln2 * ( 2 * omlprd + 2. )
+
+        zai = (gradx / e1t).where(conds).sum('depth') 
+
+        zbi = np.minimum(zbw, -100. * np.abs(zai))
+        zbi = np.minimum(zbi, -7e3 / e3w_1d * np.abs(zai))
+
+        ze3w = e3w_1d
+        for dim in slpj.dims:
+            if dim not in ze3w.dims :
+                ze3w = ze3w.expand_dims({dim: slpj[dim].shape[0]})
+        ze3w = ze3w.transpose(*slpj.dims)
+        ze3w = ze3w.where(conds).sum('depth')
+
+        omlcoef = (depth - 0.5 * ze3w) / xr.where(mlotst < 5., mlotst, 5.)
+
+        omlslp = (zai / (zbi + 1e-20)) * omlcoef
+        omlslp = omlslp.assign_coords({'depth': slpi.coords['depth']})
+
+        slpi = xr.where(omlmask, omlslp, slpi)
+        slpi = xr.where(nanmask, np.nan, slpi)
+        
+        return slpi
+
+
+class slpj:
+    """
+    Isopycnal slope (or neutral surfaces slope) in the j-direction
+    from NEMO 3.6 (ldfslp.F90)
+    """
+    long_name = 'Isopycnal slope in the j-direction'
+    standard_name = 'slpj'
+    units = ''
+    unit_long = ''
+
+    def calculate(prd, N2, mlotst, depth, e2t, e3w_1d):
+        grady = (array_diff(prd, dim='y'))
+        grady.assign_coords(coords=prd.coords)
+
+        zbw = -0.5/9.81 * N2 * ( 2 * prd + 2. )
+        zaj = grady / e2t    
+
+        zbj = np.minimum(zbw, -100. * np.abs(zaj))
+        zbj = np.minimum(zbj, -7e3 / e3w_1d * np.abs(zaj))
+            
+        slpj = (zaj / (zbj + 1e-20))
+        slpj.name = 'wslpj'
+
+        # special treatment for the mixed layer = slope just bellow the OML * coef
+        nanmask = np.isnan(slpj)
+        omlmask = (mlotst > depth)
+
+        depth = N2['depth'].copy()
+        depth = depth.assign_coords({'depth': np.arange(depth.shape[0])})
+        conds = (depth['depth'] == omlmask.sum('depth'))
+        conds = conds.assign_coords({'depth': N2['depth'].values})
+
+        omln2  = N2.where(conds).sum('depth')
+        omlprd = prd.where(conds).sum('depth')
+
+        zbw = -0.5/9.81 * omln2 * ( 2 * omlprd + 2. )
+
+        zaj = (grady / e2t).where(conds).sum('depth') 
+
+        zbj = np.minimum(zbw, -100. * np.abs(zaj))
+        zbj = np.minimum(zbj, -7e3 / e3w_1d * np.abs(zaj))
+        
+        ze3w = e3w_1d
+        for dim in slpj.dims:
+            if dim not in ze3w.dims :
+                ze3w = ze3w.expand_dims({dim: slpj[dim].shape[0]})
+        ze3w = ze3w.transpose(*slpj.dims)
+        ze3w = ze3w.where(conds).sum('depth')
+
+        omlcoef = (depth - 0.5 * ze3w) / xr.where(mlotst < 5., mlotst, 5.)
+
+        omlslp = (zaj / (zbj + 1e-20)) * omlcoef
+        omlslp = omlslp.assign_coords({'depth': slpj.coords['depth']})
+
+        slpj = xr.where(omlmask, omlslp, slpj)
+        slpj = xr.where(nanmask, np.nan, slpj)
+
+        return slpj
+
+
+class slp:
+    """
+    Isopycnal slope (or neutral surfaces slope) vector
+    """
+    long_name = 'Isopycnal slope vector'
+    standard_name = 'slp'
+    units = ''
+    unit_long = ''
+
+    def calculate(prd, N2, mlotst, depth, e1t, e2t, e3w_1d):
+        sx = slpi.calculate(prd, N2, mlotst, depth, e1t, e3w_1d)
+        sy = slpj.calculate(prd, N2, mlotst, depth, e2t, e3w_1d)
+
+        return (sx, sy)
+
+        

@@ -176,3 +176,52 @@ class FieldSelector(NemopyObject):
         
         return selected
 
+
+class IndexSelector(NemopyObject):
+    """
+    Select and reduce a dataset by selecting dims with their
+    indexes.
+
+    TODO: This processing is not finished yet.. 
+    """
+    _Parameters = {
+        "dim": {'type': str,
+                'default': 'Depth'},
+        "value": {'type': (int, xr.DataArray),
+                 'default': 0},
+    }
+
+    def __init__(self, dataset=None, **kargs):
+        NemopyObject.__init__(self, dataset)
+        
+        # add default processing parameter
+        self._set_default_parameters(**kargs)
+
+    
+    def execute(self):
+        ds = self.dataset
+        dim = self.dim
+        val = self.value
+
+        ldims = list(ds.dims) + [c for c in ds.coords if c not in ds.dims]
+        if dim not in ldims:
+            raise Exception("Selector error: '{}' ".format(dim) + 
+                        "is not in dataset dimensions or coordinates {}".format(ldims))
+
+        newcoords = list()
+        selected = xr.Dataset(coords=ds.coords)
+
+        for var in self.variables:
+            selected[var] = ds[var]
+
+            for co in selected[var].coords:
+                if co not in newcoords:
+                    newcoords.append(co)
+
+        # filter coordinates in selected variables
+        for co in selected.coords:
+            if co not in newcoords:
+                del selected.coords[co]
+        
+        return selected
+

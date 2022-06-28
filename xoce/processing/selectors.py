@@ -3,10 +3,10 @@
 
 import xarray as xr
 
-from ..api.generic import NemopyObject
+from ..api.generic import XoceObject
 
 
-class BoxClipper(NemopyObject):
+class BoxClipper(XoceObject):
     """
     Box selection regarding some box on dataset coordinates. 
     """
@@ -20,7 +20,7 @@ class BoxClipper(NemopyObject):
     }
 
     def __init__(self, dataset=None, **kargs):
-        NemopyObject.__init__(self, dataset)
+        XoceObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)
@@ -78,7 +78,7 @@ class BoxClipper(NemopyObject):
         return selected
 
 
-class Cutter(NemopyObject):
+class Cutter(XoceObject):
     """
     Cut one dimension to reduce dataset dims. If the cut value is
     not directly included in dimensions, a linear interpolation is 
@@ -97,7 +97,7 @@ class Cutter(NemopyObject):
     }
 
     def __init__(self, dataset=None, **kargs):
-        NemopyObject.__init__(self, dataset)
+        XoceObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)
@@ -135,7 +135,7 @@ class Cutter(NemopyObject):
         return selected
 
 
-class FieldSelector(NemopyObject):
+class FieldSelector(XoceObject):
     """
     Select variables to return a reduced dataset 
     """
@@ -145,7 +145,7 @@ class FieldSelector(NemopyObject):
     }
 
     def __init__(self, dataset=None, **kargs):
-        NemopyObject.__init__(self, dataset)
+        XoceObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)
@@ -177,7 +177,7 @@ class FieldSelector(NemopyObject):
         return selected
 
 
-class IndexSelector(NemopyObject):
+class IndexSelector(XoceObject):
     """
     Select and reduce a dataset by selecting dims with their
     indexes.
@@ -192,7 +192,7 @@ class IndexSelector(NemopyObject):
     }
 
     def __init__(self, dataset=None, **kargs):
-        NemopyObject.__init__(self, dataset)
+        XoceObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)

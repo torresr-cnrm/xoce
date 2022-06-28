@@ -4,7 +4,7 @@
 import h5py
 import os
 
-from ..api.generic import NemopyObject
+from ..api.generic import XoceObject
 
 
 def iowrapper(func):
@@ -20,7 +20,7 @@ def iowrapper(func):
     return inner
 
 
-class H5pyWriter(NemopyObject):
+class H5pyWriter(XoceObject):
     """
     Write a dataset (or a list of datasets) in a hdf5 file.
     """
@@ -38,7 +38,7 @@ class H5pyWriter(NemopyObject):
     }
 
     def __init__(self, dataset=None, **kargs):
-        NemopyObject.__init__(self, dataset)
+        XoceObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)

@@ -2,7 +2,7 @@
 Mechanical energy computation in [J/kg] or [m2/s2]
 """
 
-from nemopy.calc.formulas.constants import CONST
+from xoce.calc.formulas.constants import CONST
 
 
 class ke:

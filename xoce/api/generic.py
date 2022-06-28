@@ -4,7 +4,7 @@
 
 class NKeyError(Exception):
     """
-    Custom KeyError for NemopyObject.
+    Custom KeyError for XoceObject.
     """
     def __init__(self, key, obj):
         msg  = "'{}' is not a parameter for {}. ".format(key, type(obj).__name__)
@@ -13,7 +13,7 @@ class NKeyError(Exception):
 
 class NTypeError(Exception):
     """
-    Custom TypeError for NemopyObject.
+    Custom TypeError for XoceObject.
     """
     def __init__(self, key, val, obj):
         ktype = obj._Parameters[key].get('type', None)
@@ -22,9 +22,9 @@ class NTypeError(Exception):
         super().__init__(msg)      
 
 
-class NemopyObject:
+class XoceObject:
     """
-    Generic abstract class for interfacing nemopy objects as 
+    Generic abstract class for interfacing xoce objects as 
     processing and io classes.
     """
     _Parameters = dict()

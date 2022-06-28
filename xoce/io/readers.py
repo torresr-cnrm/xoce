@@ -6,12 +6,12 @@ import os
 import xarray as xr
 
 from ..api.experiment import Experiment
-from ..api.generic import NemopyObject
+from ..api.generic import XoceObject
 
 
-class H5pyReader(NemopyObject):
+class H5pyReader(XoceObject):
     """
-    Read an h5py file from nemopy post-processing and return a dataset or an 
+    Read an h5py file from xoce post-processing and return a dataset or an 
     experiment object.
     """
     _Parameters = {
@@ -22,7 +22,7 @@ class H5pyReader(NemopyObject):
     }
 
     def __init__(self, dataset=None, **kargs):
-        NemopyObject.__init__(self, dataset)
+        XoceObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)

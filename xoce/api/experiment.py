@@ -146,9 +146,6 @@ class SingleDatasetExperiment(Experiment):
 class CMIPExperiment(Experiment):
     """
     Experiment data container based on CMIP6 protocole.
-
-    TODO: create a parent class for all experiments to avoid duplicate
-          (maybe change the name 'experiment' ??)
     """
     def __init__(self, path=None, fmesh=None):
         super().__init__(path, fmesh)

@@ -5,8 +5,8 @@ import gsw
 import numpy as np
 import xarray as xr
 
-from nemopy.calc.formulas.constants import CONST
-from nemopy.utils.dataset_util import array_diff
+from xoce.calc.formulas.constants import CONST
+from xoce.utils.dataset_util import array_diff
 
 
 class rho:
@@ -217,10 +217,10 @@ class slpi:
         zbi = np.minimum(zbi, -7e3 / e3w_1d * np.abs(zai))
 
         ze3w = e3w_1d
-        for dim in slpj.dims:
+        for dim in slpi.dims:
             if dim not in ze3w.dims :
-                ze3w = ze3w.expand_dims({dim: slpj[dim].shape[0]})
-        ze3w = ze3w.transpose(*slpj.dims)
+                ze3w = ze3w.expand_dims({dim: slpi[dim].shape[0]})
+        ze3w = ze3w.transpose(*slpi.dims)
         ze3w = ze3w.where(conds).sum('depth')
 
         omlcoef = (depth - 0.5 * ze3w) / xr.where(mlotst < 5., mlotst, 5.)

@@ -1,14 +1,14 @@
 """
 Define functions and methods for averaging datasets. 
 
-Note: these functions should probably be a nemopy.Processing class
+Note: these functions should probably be a xoce.Processing class
 since they have dataset as input and return a new one. Next version ?
 """
 
 import numpy as np
 import xarray as xr
 
-from nemopy.processing import Selector
+from xoce.processing import Selector
 from .dataset_util import split_dataset
 from .datetime_util import datetime_mean
 
@@ -80,4 +80,4 @@ def zonal_average(dataset, axis='longitude', res_axis='latitude', res_dim='y'):
         averaged = xr.concat(arrays, ds[res_axis].dims[0])  
     
     return averaged
-    
+

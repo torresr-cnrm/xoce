@@ -4,10 +4,10 @@
 import numpy as np
 import xarray as xr
 
-from ..api.generic import NemopyObject
+from ..api.generic import XoceObject
 
 
-class Integral(NemopyObject):
+class Integral(XoceObject):
     """
     Integration of some datas over one specified dimension 
     or the whole space.
@@ -20,7 +20,7 @@ class Integral(NemopyObject):
     }
 
     def __init__(self, dataset=None, **kargs):
-        NemopyObject.__init__(self, dataset)
+        XoceObject.__init__(self, dataset)
         
         # add default processing parameter
         self._set_default_parameters(**kargs)

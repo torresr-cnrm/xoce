@@ -4,7 +4,7 @@
 import numpy as np
 import xarray as xr
 
-from nemopy.processing import Selector
+from xoce.processing.selectors import BoxClipper
 
 
 def merge_coordinates(dataset, coords, diff='relative', tol=1e-6):
@@ -90,7 +90,7 @@ def split_dataset(dataset, dim, bounds, drop=False):
     res = list()
     
     # use box clipper processing with only one dim
-    clipper = Selector('box-clip', dataset=dataset)
+    clipper = BoxClipper(dataset=dataset)
     clipper.set('drop', drop)
 
     for bnds in bounds:

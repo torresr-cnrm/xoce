@@ -1,4 +1,4 @@
-from .filters import AverageFilter
+from .filters import AverageFilter, ShapiroFilter
 from .integration import Integral
 from .selectors import BoxClipper, FieldSelector
 
@@ -7,6 +7,8 @@ from .selectors import BoxClipper, FieldSelector
 def Filter(name, dataset=None, *args, **kargs):
     if name == 'average':
         return AverageFilter(dataset, *args, **kargs)
+    elif name == 'shapiro':
+        return ShapiroFilter(dataset, *args, **kargs)
 
 def Selector(name, dataset=None, *args, **kargs):
     if name == 'box-clip':

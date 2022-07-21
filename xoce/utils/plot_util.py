@@ -207,7 +207,11 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
                             transform=ccrs.PlateCarree())
 
     # add an adaptative size color bar
-    xcb = xmap.figure.add_axes([0, 0, 0.1, 0.1])
+    labs = [ax.get_label() for ax in xmap.figure.axes]
+    ilab = 0
+    while 'colorbar_id{}'.format(ilab) in labs:
+        ilab += 1
+    xcb = xmap.figure.add_axes([0, 0, 0.1, 0.1], label='colorbar_id{}'.format(ilab))
     xcb.axis('off')
 
     posn = xmap.get_position()
@@ -215,3 +219,4 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     plt.colorbar(carto, ax=xcb, fraction=1, pad=0)
 
     plt.close()
+

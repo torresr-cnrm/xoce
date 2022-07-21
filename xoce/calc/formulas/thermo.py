@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 from xoce.calc.formulas.constants import CONST
-from xoce.utils.dataset_util import array_diff
+from xoce.utils.dataset_util import array_diff, broadcast_like
 
 
 class rho:
@@ -205,6 +205,7 @@ class slpi:
         depth = depth.assign_coords({'depth': np.arange(depth.shape[0])})
         conds = (depth['depth'] == omlmask.sum('depth'))
         conds = conds.assign_coords({'depth': N2['depth'].values})
+        depth = depth.assign_coords({'depth': N2['depth'].values})
 
         omln2  = N2.where(conds).sum('depth')
         omlprd = prd.where(conds).sum('depth')
@@ -216,13 +217,7 @@ class slpi:
         zbi = np.minimum(zbw, -100. * np.abs(zai))
         zbi = np.minimum(zbi, -7e3 / e3w_1d * np.abs(zai))
 
-        ze3w = e3w_1d
-        for dim in slpi.dims:
-            if dim not in ze3w.dims :
-                ze3w = ze3w.expand_dims({dim: slpi[dim].shape[0]})
-        ze3w = ze3w.transpose(*slpi.dims)
-        ze3w = ze3w.where(conds).sum('depth')
-
+        ze3w = broadcast_like(slpi, e3w_1d)
         omlcoef = (depth - 0.5 * ze3w) / xr.where(mlotst < 5., mlotst, 5.)
 
         omlslp = (zai / (zbi + 1e-20)) * omlcoef
@@ -265,6 +260,7 @@ class slpj:
         depth = depth.assign_coords({'depth': np.arange(depth.shape[0])})
         conds = (depth['depth'] == omlmask.sum('depth'))
         conds = conds.assign_coords({'depth': N2['depth'].values})
+        depth = depth.assign_coords({'depth': N2['depth'].values})
 
         omln2  = N2.where(conds).sum('depth')
         omlprd = prd.where(conds).sum('depth')
@@ -276,13 +272,7 @@ class slpj:
         zbj = np.minimum(zbw, -100. * np.abs(zaj))
         zbj = np.minimum(zbj, -7e3 / e3w_1d * np.abs(zaj))
         
-        ze3w = e3w_1d
-        for dim in slpj.dims:
-            if dim not in ze3w.dims :
-                ze3w = ze3w.expand_dims({dim: slpj[dim].shape[0]})
-        ze3w = ze3w.transpose(*slpj.dims)
-        ze3w = ze3w.where(conds).sum('depth')
-
+        ze3w = broadcast_like(slpj, e3w_1d)
         omlcoef = (depth - 0.5 * ze3w) / xr.where(mlotst < 5., mlotst, 5.)
 
         omlslp = (zaj / (zbj + 1e-20)) * omlcoef

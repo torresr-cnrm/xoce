@@ -100,3 +100,42 @@ def split_dataset(dataset, dim, bounds, drop=False):
 
     return res
 
+
+def get_dim_axis(dataset, dim_names):
+    """
+    Return the axis order af a `dataset` (could be both xr.Dataset or xr.DataArray)
+    corresponding to the desired dimensions in `dim_names` 
+    """
+    axis  = list()
+    for d in dim_names:
+        if d not in dataset.dims:
+            raise Exception("'{}' is not in dataset dimensions: ".format(d) +
+                            "{}".format(list(dataset.dims)))
+        else:
+            axis.append(list(dataset.dims).index(d))
+
+    return axis
+
+
+def broadcast_like(model, da:xr.DataArray):
+    """
+    Returns a new xr.DataArray with the exact same shape as `model` 
+    and fill with the values of `da`.
+    """
+    res = xr.full_like(model, 0)
+    res.name = da.name
+    res.attrs = da.attrs
+    
+    rshape = [1] * len(res.shape)
+    zaxis  = get_dim_axis(res, ['depth'])[0]
+    rshape[zaxis] = res.shape[zaxis]
+    
+    for d in res.dims:
+        if d not in da.dims:
+            da = da.expand_dims({d: 1})
+    da = da.transpose(*list(res.dims))
+
+    res[:] = da[:]
+    
+    return res
+

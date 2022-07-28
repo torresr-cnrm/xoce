@@ -8,11 +8,11 @@ import numpy as np
 import xarray as xr
 
 from ..calc import CalcManager
-from ..utils.dataset_util import merge_coordinates
+from ..utils.dataset_util import interp_coord, merge_coordinates
 from ..utils.io_util import extract_cmip6_variables, get_filename_from_drs
 from ..utils.io_util import load_cmip6_output
 
-from . import _VARS_NAME
+from . import _DIM_COORDINATES, _VARS_NAME
 
 
 
@@ -40,6 +40,8 @@ class Experiment:
                 variable = self._arrays[var]
             elif var in self._mesh.variables:
                 variable = self._mesh[var]
+            elif var in self.coords:
+                variable = self.coords[var]
             else:
                 lres = self.load_variable(var, chunks=self._chunks)
                 if lres is not None:
@@ -50,15 +52,27 @@ class Experiment:
             for dim in self._unused_dims:
                 if dim in variable.dims:
                     variable = variable.isel({dim:0})
+            
             self.add_variable(var, variable)
+            array = self._arrays[var]
 
-            return self._arrays[var]
         else:
-            if self._calc.is_calculable(var):
-                return self.calculate(var)
-            else:
+            if not self._calc.is_calculable(var):
                 raise KeyError("'{}' is not a variable of the experiment.".format(var) +
-                            "Available variables: {}".format(self.variables))
+                    "Available variables: {}".format(self.variables))
+            else:
+                array = self.calculate(var)
+
+        # finally return the array      
+        for d in array.dims :
+            c = _DIM_COORDINATES.get(d, d)
+            if c in array.coords and c in self.coords:
+                # linear interpolation if needed..
+                if (array[c].data == self.coords[c].data).sum() != array[c].size:
+                    array = interp_coord(array, {c: self.coords[c]}, d, method='linear')
+        
+        return array
+
 
     def __setitem__(self, var, values):
         # TODO: add test on dimensions
@@ -83,7 +97,7 @@ class Experiment:
 
     @property
     def variables(self):
-        return list(self._arrays) + list(self._mesh)
+        return list(self._arrays) + list(self._mesh) + list(self.coords)
 
     def calculate(self, var):
         return self._calc.calculate(var)
@@ -97,6 +111,13 @@ class Experiment:
         return dataset
 
     def add_variable(self, var, arr, rename_dims=True):
+        """
+        Add new variable in the private self._arrays dictionary.
+        If the variable already exists, the function simply return 
+        the desired array. 
+        Warning: special treatment are made to get the real variable 
+        name..
+        """
         if var in list(_VARS_NAME[type(self).__name__].keys()):
             newvar = _VARS_NAME[type(self).__name__][var]
         else:
@@ -111,8 +132,37 @@ class Experiment:
 
             if arr.name in _VARS_NAME[type(self).__name__]:
                 arr.name = _VARS_NAME[type(self).__name__][arr.name]
+
+        if newvar not in self._arrays:
+            self._arrays[newvar] = arr
         
-        self._arrays[newvar] = arr
+        return newvar, arr
+
+    def add_coordinate(self, var, arr, rename_dims=True):
+        """
+        Add new coordinate in the private self._coords dictionary.
+        If the variable already exists, the function simply return 
+        the desired array. 
+        Warning: special treatment are made to get the real variable 
+        name..
+        """
+        if var in list(_VARS_NAME[type(self).__name__].keys()):
+            newvar = _VARS_NAME[type(self).__name__][var]
+        else:
+            newvar = var
+
+        if rename_dims:
+            rename_dict = dict()
+            for vn in _VARS_NAME[type(self).__name__]:
+                if vn in list(arr.dims) + list(arr.coords):
+                    rename_dict[vn] = _VARS_NAME[type(self).__name__][vn]
+            arr = arr.rename(rename_dict)
+
+            if arr.name in _VARS_NAME[type(self).__name__]:
+                arr.name = _VARS_NAME[type(self).__name__][arr.name]
+
+        if newvar not in self._arrays:
+            self._coords[newvar] = arr
         
         return newvar, arr
 
@@ -185,8 +235,7 @@ class CMIPExperiment(Experiment):
         
         for c in ds.coords:
             if c not in self.coords:
-                newc, datc = self.add_variable(c, ds.coords[c], rename_dims=True)
-                self._coords[newc] = datc
+                _ = self.add_coordinate(c, ds.coords[c], rename_dims=True)
         
         # finally link DataArray in a container
         self.add_variable(var, ds[var])

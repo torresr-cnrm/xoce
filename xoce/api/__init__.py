@@ -7,3 +7,8 @@ _VARS_NAME = {
         'lon': 'longitude',
     },
 }
+
+_DIM_COORDINATES = {
+    'x': 'longitude',
+    'y': 'latitude',
+}

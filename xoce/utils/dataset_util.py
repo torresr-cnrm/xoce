@@ -1,6 +1,7 @@
 """
 """
 
+from argparse import ArgumentError
 import numpy as np
 import xarray as xr
 
@@ -139,3 +140,68 @@ def broadcast_like(model, da:xr.DataArray):
     
     return res
 
+
+def interp_coord(da, coords, dim, method='linear'):
+    """
+    Interpolate an array with a new coordinate array.
+    Only 1D interpolation is allowed which means pnly one coordinate in 
+    the dictionary coords.
+    """
+    def _delta(a, i):
+        slcup = [slice(0, None, 1)] * len(a.shape)
+        slcdw = [slice(0, None, 1)] * len(a.shape)
+        slcup[i] = slice(1, None, 1)
+        slcdw[i] = slice(0, -1, 1)
+
+        slcup = tuple(slcup)
+        slcdw = tuple(slcdw)
+        
+        return a[slcup] - a[slcdw], (slcup, slcdw)
+    
+    if method not in ['linear']:
+        raise Exception("Unknown method '{}'".format(method))
+
+    arr = xr.full_like(da, np.nan)
+
+    if method == 'linear':
+        cname  = list(coords.keys())[0]
+
+        # compute delta of coord
+        dco = np.array(coords[cname]) - da[cname].data
+        
+        shp = [1] * len(da.shape)
+        for d in da[cname].dims:
+            ind = da.dims.index(d)
+            shp[ind] = da.shape[ind]
+
+        dco = dco.reshape(shp)
+
+        # compute delta of coordinate upward and downward
+        j = da[cname].dims.index(dim)
+        cup = np.ones_like(coords[cname])
+        cdw = np.ones_like(coords[cname])
+
+        delta_co, slicers = _delta(da[cname].data, j)
+
+        cup[slicers[1]] = delta_co
+        cdw[slicers[0]] = delta_co
+
+        cup = cup.reshape(shp)
+        cdw = cdw.reshape(shp)
+
+        # compute delta of data upward and downward
+        i = da.dims.index(dim)
+        dup = xr.full_like(da, 0.)
+        ddw = xr.full_like(da, 0.)
+
+        delta_da, slicers = _delta(da.data, i)
+
+        dup[slicers[1]] = delta_da
+        ddw[slicers[0]] = delta_da
+
+        # compute final data 
+        # array = data + coef_up * (dy/dx)_up - coef_down * (dy/dx)_down
+        arr.data = da.data  + dco * ( (np.sign(dco) + 1) / 2.) * dup/cup
+        arr.data = arr.data - dco * ( (np.sign(dco) - 1) / 2.) * ddw/cdw
+
+    return arr

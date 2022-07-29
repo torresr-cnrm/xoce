@@ -4,6 +4,8 @@
 import numpy as np
 import xarray as xr
 
+import xoce.utils.dataset_util as xdsutil
+
 from ..api.generic import XoceObject
 
 
@@ -67,7 +69,10 @@ class Integral(XoceObject):
             vals  = (cell_coefs*ds[var]).sum(dim=dims)
             conds = np.isnan(ds[var].sum(dim=dims, skipna=False))
             conds = conds & (ds[var].sum(dim=dims, skipna=True) == 0.)
-            integrated[var] = xr.where(conds, np.nan, vals)
+            narray = xr.where(conds, np.nan, vals)
+            
+            narray.name = var
+            xdsutil.assign_variable(integrated, narray)
 
         return integrated
 

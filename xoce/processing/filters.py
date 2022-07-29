@@ -5,8 +5,11 @@ import cftime
 import numpy as np
 import xarray as xr
 
+import xoce.utils.dataset_util as xdsutil
+
 from ..api.generic import XoceObject
 from ..utils.datetime_util import datetime_mean
+
 
 
 class AverageFilter(XoceObject):
@@ -74,11 +77,14 @@ class AverageFilter(XoceObject):
                 sliced = ds[v].where(conds)
                 vmean  = sliced.mean(dim=self.dim)
 
-                # add filtered variable
                 if self.inverse:
-                    filtered[v] = ds[v] - vmean
+                    narray = ds[v] - vmean
                 else:
-                    filtered[v] = vmean.expand_dims({'time':1})
+                    narray = vmean.expand_dims({self.dim:filtered[self.dim]})
+                
+                # add filtered variable
+                narray.name = v
+                xdsutil.assign_variable(filtered, narray)
 
         return filtered
 

@@ -38,6 +38,9 @@ class H5pyReader(XoceObject):
             datasets = [self.dataset]
         
         realname = os.path.join(self.path, self.filename)
+        if not os.path.isfile(realname):
+            return datasets
+
         f = h5py.File(realname, 'r')
 
         # read one dataset for each group

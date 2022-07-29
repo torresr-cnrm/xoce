@@ -1,7 +1,6 @@
 """
 """
 
-from argparse import ArgumentError
 import numpy as np
 import xarray as xr
 
@@ -205,3 +204,26 @@ def interp_coord(da, coords, dim, method='linear'):
         arr.data = arr.data - dco * ( (np.sign(dco) - 1) / 2.) * ddw/cdw
 
     return arr
+
+
+def assign_variable(ds, da, name=None, interpolate=True):
+    """
+    Append a new DataArray `da` to a Dataset `ds`. This function check the 
+    dimensions consistency between the dataset and the array.
+    If `interpolate` is True, a linear interpolation is used to fit the 
+    new array with the dataset dimensions. Otherwise, the array dimensions 
+    are overwritten.
+    """
+    array = da
+    for d in da.dims :
+        if d in ds.dims and (da[d].data == ds[d].data).sum() != da[d].size:
+            if interpolate:
+                array = array.interp({d:ds[d].data})
+            else:
+                array[d].data = ds[d].data
+    
+    if name is None:
+        name = array.name
+
+    ds[name] = array
+

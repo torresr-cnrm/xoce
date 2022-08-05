@@ -53,7 +53,10 @@ class H5pyReader(XoceObject):
         
             # get variables
             for v in grp.keys():
+                # read data
                 datas = grp[v][()]
+
+                # read dimensions
                 dims  = list()
                 for i, dim in enumerate(grp[v].dims):
                     dname = dim.label
@@ -65,7 +68,17 @@ class H5pyReader(XoceObject):
                                     dname = d
                     dims.append(dname)
 
-                da = xr.DataArray(datas, dims=dims)
+                # read coordinates
+                if 'coordinates' in grp[v].attrs:
+                    coordinates = grp[v].attrs['coordinates'].split()
+                    coords = dict()
+                    for c in coordinates:
+                        cname = c.decode('utf-8')
+                        coords[cname] = grp[cname][()]
+                else:
+                    coords = None
+
+                da = xr.DataArray(datas, coords=coords, dims=dims)
                 try:
                     ds[v] = da
                 except xr.MergeError:

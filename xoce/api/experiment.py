@@ -96,6 +96,10 @@ class Experiment:
         return self._coords
 
     @property
+    def attrs(self):
+        return {}
+
+    @property
     def variables(self):
         return list(self._arrays) + list(self._mesh) + list(self.coords)
 

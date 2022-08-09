@@ -69,9 +69,16 @@ class H5pyWriter(XoceObject):
 
             # create coordinates
             for co in ds.coords:
-                if co in ds.dims:
-                    continue
                 arr = ds.coords[co]
+
+                if co in ['time', 't']:
+                    if arr.dtype == 'O':
+                        arr[co] = arr.indexes[co].to_datetimeindex()
+                        dtype = h5py.opaque_dtype(arr[co].dtype)
+                    else:
+                        dtype = h5py.opaque_dtype(arr.dtype)
+                    arr = arr.astype(dtype)
+
                 self._write_variable(co, arr, grp)
                 
             # create variables
@@ -80,11 +87,11 @@ class H5pyWriter(XoceObject):
                     if v in ds.coords:
                         continue
 
-                    arr = ds.variables[v]
+                    arr = ds[v]
                     if self.reduce_mem and arr.dtype == 'float64':
                         arr = arr.astype('float32')
-
-                    self._write_variable(co, arr, grp)
+                        
+                    self._write_variable(v, arr, grp)
 
         f.close()
 
@@ -93,7 +100,6 @@ class H5pyWriter(XoceObject):
         """Write a new dataset which correspond to a dimension. Note if 
         the dimension already exists, then the function simply return it.
         """
-        
         var = hdf_group.create_dataset(name, array.shape, array.dtype, array.data)
 
         for at in array.attrs:
@@ -103,7 +109,8 @@ class H5pyWriter(XoceObject):
         for ind, dim in enumerate(array.dims):
             vdim = self._write_dim(dim, array[dim], hdf_group)
             var.dims[ind].label = dim
-            var.dims[ind].attach_scale(vdim)
+            if dim != name:
+                var.dims[ind].attach_scale(vdim)
 
         # store coordinates in attributes
         if list(array.coords):

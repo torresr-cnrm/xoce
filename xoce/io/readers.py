@@ -5,8 +5,8 @@ import h5py
 import os
 import xarray as xr
 
-from ..api.experiment import Experiment
 from ..api.generic import XoceObject
+from ..utils.datetime_util import datetime_to_cftime
 
 
 class H5pyReader(XoceObject):
@@ -53,11 +53,21 @@ class H5pyReader(XoceObject):
         
             # get variables
             for v in grp.keys():
+                
+                vcls  = grp[v].attrs.get('CLASS', '')
+                if isinstance(vcls, (bytes)):
+                    vcls = vcls.decode('utf-8')
+                
+                if vcls == 'DIMENSION_SCALE':
+                    continue
+                
                 # read data
                 datas = grp[v][()]
+                if 'datetime' in datas.dtype.__str__():
+                    datas = datetime_to_cftime(datas)
 
                 # read dimensions
-                dims  = list()
+                dims = list()
                 for i, dim in enumerate(grp[v].dims):
                     dname = dim.label
                     if not dname:
@@ -73,8 +83,15 @@ class H5pyReader(XoceObject):
                     coordinates = grp[v].attrs['coordinates'].split()
                     coords = dict()
                     for c in coordinates:
-                        cname = c.decode('utf-8')
-                        coords[cname] = grp[cname][()]
+                        cname = c
+                        if isinstance(c, (bytes)):
+                            cname = c.decode('utf-8')
+                        cdats = grp[cname][()]
+                        if 'datetime' in cdats.dtype.__str__():
+                            cdats = datetime_to_cftime(cdats)
+                        cdims = list(grp[cname].attrs['DIMENSION_LABELS'])
+
+                        coords[cname] = xr.DataArray(cdats, name=cname, dims=cdims)
                 else:
                     coords = None
 

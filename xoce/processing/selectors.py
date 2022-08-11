@@ -2,6 +2,7 @@
 """
 
 import xarray as xr
+import xoce.utils.dataset_util as xdsutil
 
 from ..api.generic import XoceObject
 
@@ -186,9 +187,11 @@ class IndexSelector(XoceObject):
     """
     _Parameters = {
         "dim": {'type': str,
-                'default': 'Depth'},
-        "value": {'type': (int, xr.DataArray),
-                 'default': 0},
+                'default': 'depth'},
+        "index": {'type': (int, xr.DataArray),
+                  'default': 0},
+        "variables": {'type': list,
+                      'default': None},
     }
 
     def __init__(self, dataset=None, **kargs):
@@ -201,27 +204,35 @@ class IndexSelector(XoceObject):
     def execute(self):
         ds = self.dataset
         dim = self.dim
-        val = self.value
+        ind = self.index
+
+        variables = self.variables
+        if variables is None:
+            variables = ds.variables
 
         ldims = list(ds.dims) + [c for c in ds.coords if c not in ds.dims]
         if dim not in ldims:
             raise Exception("Selector error: '{}' ".format(dim) + 
                         "is not in dataset dimensions or coordinates {}".format(ldims))
 
-        newcoords = list()
-        selected = xr.Dataset(coords=ds.coords)
+        dim_val = ds[dim][ind]
 
-        for var in self.variables:
-            selected[var] = ds[var]
+        # coordinates selection
+        newcoords = dict()
+        for var in variables:
+            for co in ds[var].coords:
+                if co not in newcoords and co != dim:
+                    newcoords[co] = ds[var][co]
+        newcoords[dim] = dim_val
 
-            for co in selected[var].coords:
-                if co not in newcoords:
-                    newcoords.append(co)
+        selected = xr.Dataset(coords=newcoords)
 
-        # filter coordinates in selected variables
-        for co in selected.coords:
-            if co not in newcoords:
-                del selected.coords[co]
+        for var in variables:
+            da = ds[var].isel({dim:ind}).expand_dims({dim:[dim_val]})
+
+            # add selected variable
+            da.name = var
+            xdsutil.assign_variable(selected, da)
         
         return selected
 

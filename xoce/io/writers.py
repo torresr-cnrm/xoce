@@ -3,7 +3,7 @@
 
 import h5py
 import os
-
+import numpy as np
 from ..api.generic import XoceObject
 
 
@@ -100,6 +100,7 @@ class H5pyWriter(XoceObject):
         """Write a new dataset which correspond to a dimension. Note if 
         the dimension already exists, then the function simply return it.
         """
+
         var = hdf_group.create_dataset(name, array.shape, array.dtype, array.data)
 
         for at in array.attrs:

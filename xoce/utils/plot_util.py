@@ -2,7 +2,8 @@
 Define functions and methods for plotting datas. 
 """
 
-from audioop import reverse
+from fractions import Fraction
+import matplotlib as mpl
 import numpy as np
 import numpy.ma as ma
 import xarray as xr
@@ -184,6 +185,8 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     shading = kargs.get('shading', 'auto')
     title = kargs.get('title', '')
     bcg = kargs.get('bgc', (0.75, 0.75, 0.75))
+    cbar_labels = kargs.get('cbar_labels', {})
+    colorbar = kargs.get('colorbar', None)
 
     # add general information about axis
     if title:
@@ -192,6 +195,12 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     # axes for cartography plot
     if isinstance(cmap, str):
         cmap = plt.cm.get_cmap(cmap)
+    
+    # overwrite properties if a colorbar is given
+    if colorbar is not None:
+            cmap = colorbar.cmap
+            norm = colorbar.norm
+            vbounds = (colorbar.vmin, colorbar.vmax)
 
     xmap.coastlines()
     xmap.gridlines()
@@ -211,12 +220,23 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     ilab = 0
     while 'colorbar_id{}'.format(ilab) in labs:
         ilab += 1
-    xcb = xmap.figure.add_axes([0, 0, 0.1, 0.1], label='colorbar_id{}'.format(ilab))
+    xcb = xmap.figure.add_axes([0, 0, 0.01, 0.1], label='colorbar_id{}'.format(ilab))
     xcb.axis('off')
 
     posn = xmap.get_position()
-    xcb.set_position([posn.x0 + posn.width + 0.02, posn.y0, 0.04, posn.height])
-    plt.colorbar(carto, ax=xcb, fraction=1, pad=0)
+    xcb.set_position([posn.x0 + posn.width + 0.02, posn.y0, 0.01, posn.height])
+
+    if colorbar is not None:
+        colorbar.ax = xcb
+        colorbar.cax = xcb
+        colorbar.update_bruteforce(colorbar.mappable)
+    else:
+        if cbar_labels:
+            cbar = plt.colorbar(carto, ax=xcb, fraction=1, pad=0, 
+                                ticks=list(cbar_labels.values()))
+            cbar.ax.set_yticklabels(list(cbar_labels.keys()))
+        else:
+            plt.colorbar(carto, ax=xcb, fraction=1, pad=0)
 
     plt.close()
 

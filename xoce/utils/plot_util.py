@@ -2,8 +2,8 @@
 Define functions and methods for plotting datas. 
 """
 
-from fractions import Fraction
-import matplotlib as mpl
+from turtle import color
+from matplotlib.colors import colorConverter
 import numpy as np
 import numpy.ma as ma
 import xarray as xr
@@ -69,7 +69,7 @@ def switch_array(datas, isep, axis=0):
 
 
 def get_variable_data(datas, var, mesh=None, filtering=True, lamtol=100, 
-                        make_grid=False):
+                      make_grid=False):
     """
     Get variable datas and re arange fields if needed
     (ex: if discontinuity is found in longitudinal data.)
@@ -172,6 +172,83 @@ def get_variable_data(datas, var, mesh=None, filtering=True, lamtol=100,
     return lons, lats, vals
 
 
+def fill_orca_grid(lons, lats, values, xmap, qmesh, phimax=89.9):
+    """
+    Fill non-value datas due to the tri-polar ORCA grid.
+    This function build a second mesh to fill and add it to the 
+    current one.
+    """
+    wlons, elons = list(), list()
+    wlats, elats = list(), list()
+    wvals, evals = list(), list()
+
+    nb_lats, nb_lons = lats.shape
+    
+    # East ORCA pole
+    west = lons[-1] < 0
+    iepol = np.nanargmin(np.where(~west, lats[-1], np.nan))
+
+    i = 0
+    icnds = (lons[-1][iepol-i] >= 0.) and (iepol+1+i < nb_lons)
+    while (lats[-1][iepol-i] < phimax) and icnds:
+        elons.append([lons[-1][iepol-i], lons[-1][iepol+1+i]])
+        elats.append([lats[-1][iepol-i], lats[-1][iepol+1+i]])
+        evals.append([values[-1][iepol-i]])
+
+        i+= 1
+        icnds = (lons[-1][iepol-i] >= 0.) and (iepol+1+i < nb_lons)
+
+    # West ORCA pole
+    iwpol = np.nanargmin(np.where(west, lats[-1], np.nan))
+    
+    i = 0
+    icnds = (lons[-1][iwpol+1+i] <= 0.) and (iwpol-i >= 0)
+    while (lats[-1][iwpol-i] < phimax) and icnds:
+        wlons.append([lons[-1][iwpol-i], lons[-1][iwpol+1+i]])
+        wlats.append([lats[-1][iwpol-i], lats[-1][iwpol+1+i]])
+        wvals.append([values[-1][iwpol-i]])
+        
+        i+= 1
+        icnds = (lons[-1][iwpol+1+i] <= 0.) and (iwpol-i >= 0)
+
+    wlons.append([0, 180.])
+    wlats.append([phimax, 90.])
+    
+    # now add the new values in the axes 
+    vmin, vmax = qmesh.get_clim()
+
+    if elons:
+        xmap.pcolormesh(np.array(elons), np.array(elats), np.array(evals), 
+                        vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm, 
+                        shading='auto', transform=ccrs.PlateCarree())
+    if wlons:
+        xmap.pcolormesh(np.array(wlons), np.array(wlats), np.array(wvals),
+                        vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm,
+                        shading='auto', transform=ccrs.PlateCarree())
+
+    # avoid longitude discontinuity
+    if isinstance(xmap.projection, (ccrs.PlateCarree)):
+        nlons = np.ones((nb_lats, 2)) * -180.5
+        nlons[:, 1] = lons[:, 0]
+        nlats = np.ones((nb_lats, 2)) * lats[:, 0].reshape((nb_lats, 1))
+        nvals = values[:, 0].reshape((nb_lats, 1))
+
+        xmap.pcolormesh(nlons, nlats, nvals, 
+                        vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm, 
+                        shading='auto', transform=ccrs.PlateCarree())
+
+        nlons = np.ones((nb_lats, 2)) * 180.5
+        nlons[:, 0] = lons[:, -1]
+        nlats = np.ones((nb_lats, 2)) * lats[:, -1].reshape((nb_lats, 1))
+        nvals = values[:, -1].reshape((nb_lats, 1))
+        
+        xmap.pcolormesh(nlons, nlats, nvals, 
+                        vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm, 
+                        shading='auto', transform=ccrs.PlateCarree())
+
+    return None
+
+
 def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None, 
                 **kargs):
     """ 
@@ -180,13 +257,14 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     # arrange arguments
     if vbounds is None:
         vbounds = (None, None)
-
+    
     # get key arguments
     shading = kargs.get('shading', 'auto')
     title = kargs.get('title', '')
     bcg = kargs.get('bgc', (0.75, 0.75, 0.75))
     cbar_labels = kargs.get('cbar_labels', {})
     colorbar = kargs.get('colorbar', None)
+    orca_grid = kargs.get('orca_grid', True)
 
     # add general information about axis
     if title:
@@ -198,9 +276,9 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     
     # overwrite properties if a colorbar is given
     if colorbar is not None:
-            cmap = colorbar.cmap
-            norm = colorbar.norm
-            vbounds = (colorbar.vmin, colorbar.vmax)
+        cmap = colorbar.cmap
+        norm = colorbar.norm
+        vbounds = (colorbar.vmin, colorbar.vmax)
 
     xmap.coastlines()
     xmap.gridlines()
@@ -211,9 +289,12 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
         xmap.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
 
     # plot data
-    carto = xmap.pcolormesh(lons[:, :], lats[:, :], values[:, :], vmin=vbounds[0], 
+    qmesh = xmap.pcolormesh(lons[:, :], lats[:, :], values[:, :], vmin=vbounds[0], 
                             vmax=vbounds[1], cmap=cmap, norm=norm, shading=shading, 
                             transform=ccrs.PlateCarree())
+
+    if orca_grid:
+        fill_orca_grid(lons[:, :], lats[:, :], values[:, :], xmap, qmesh)
 
     # add an adaptative size color bar
     labs = [ax.get_label() for ax in xmap.figure.axes]
@@ -229,14 +310,25 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     if colorbar is not None:
         colorbar.ax = xcb
         colorbar.cax = xcb
+        
+        locs, seq = list(), list()
+        if 'locs' in colorbar.locator.__dict__:
+            locs = colorbar.locator.locs
+        if 'seq' in colorbar.formatter.__dict__:
+            seq = colorbar.formatter.seq
+
         colorbar.update_bruteforce(colorbar.mappable)
+        if list(locs):
+            colorbar.set_ticks(locs)
+        if list(seq):
+            colorbar.set_ticklabels(seq)
     else:
         if cbar_labels:
-            cbar = plt.colorbar(carto, ax=xcb, fraction=1, pad=0, 
+            cbar = plt.colorbar(qmesh, ax=xcb, fraction=1, pad=0, 
                                 ticks=list(cbar_labels.values()))
             cbar.ax.set_yticklabels(list(cbar_labels.keys()))
         else:
-            plt.colorbar(carto, ax=xcb, fraction=1, pad=0)
+            plt.colorbar(qmesh, ax=xcb, fraction=1, pad=0)
 
     plt.close()
 

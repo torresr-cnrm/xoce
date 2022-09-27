@@ -4,11 +4,13 @@
 
 import copy
 import os
+from typing import Hashable
 import numpy as np
 import xarray as xr
 
 from ..calc import CalcManager
 from ..utils.dataset_util import interp_coord, merge_coordinates
+from ..utils.datetime_util import decode_months_since
 from ..utils.io_util import extract_cmip6_variables, get_filename_from_drs
 from ..utils.io_util import load_cmip6_output
 
@@ -114,6 +116,15 @@ class Experiment:
         
         return dataset
 
+    def rename(self, name_dict=None, **names):
+        if isinstance(name_dict, dict):
+            names = name_dict
+        
+        for name in names:
+            if name in self._arrays:
+                self._arrays = self._arrays.rename(**{name:names[name]})
+
+
     def add_variable(self, var, arr, rename_dims=True):
         """
         Add new variable in the private self._arrays dictionary.
@@ -185,16 +196,32 @@ class SingleDatasetExperiment(Experiment):
 
     # abstract method(s) definition
     def load(self, chunks=None):
-        ds = xr.open_mfdataset(self.path, chunks=chunks)
+
+        try :
+            ds = xr.open_mfdataset(self.path, chunks=chunks)
+        except ValueError:
+            ds = xr.open_mfdataset(self.path, chunks=chunks, decode_times=False)
+            ds = ds.assign_coords( {'time': decode_months_since(ds['time'])} )
+        
         if self.fmesh:
             mesh = xr.open_dataset(self.fmesh)
+            code_info = merge_coordinates(mesh, ds.coords)
+            if code_info == -1:
+                print("Warning: mesh and dataset coordinates are not everywhere equal.")
+            else:
+                self._mesh = mesh
 
-        code_info = merge_coordinates(mesh, ds.coords)
-        if code_info == -1:
-            print("Warning: mesh and dataset coordinates are not everywhere equal.")
+        # rename some vars, coords or dims
+        rename_dict = dict()
+        for v, n in _VARS_NAME[type(self).__name__].items():
+            if v in ds:
+                rename_dict[v] = n
+        ds = ds.rename(rename_dict)
 
+        # add into object placeholders
         self._arrays = ds
-        self._mesh = mesh
+        self._coords = ds.coords
+        self._dims   = ds.dims
 
 
 class CMIPExperiment(Experiment):

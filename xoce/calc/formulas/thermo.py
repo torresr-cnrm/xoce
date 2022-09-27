@@ -188,7 +188,7 @@ class slpi:
         gradx = (array_diff(prd, dim='x'))
         gradx.assign_coords(coords=prd.coords)
 
-        zbw = -0.5/9.81 * N2 * ( 2 * prd + 2. )
+        zbw = -0.5/CONST.g * N2 * ( 2 * prd + 2. )
         zai = gradx / e1t    
 
         zbi = np.minimum(zbw, -100. * np.abs(zai))
@@ -210,7 +210,7 @@ class slpi:
         omln2  = N2.where(conds).sum('depth')
         omlprd = prd.where(conds).sum('depth')
 
-        zbw = -0.5/9.81 * omln2 * ( 2 * omlprd + 2. )
+        zbw = -0.5/CONST.g * omln2 * ( 2 * omlprd + 2. )
 
         zai = (gradx / e1t).where(conds).sum('depth') 
 
@@ -243,7 +243,7 @@ class slpj:
         grady = (array_diff(prd, dim='y'))
         grady.assign_coords(coords=prd.coords)
 
-        zbw = -0.5/9.81 * N2 * ( 2 * prd + 2. )
+        zbw = -0.5/CONST.g * N2 * ( 2 * prd + 2. )
         zaj = grady / e2t    
 
         zbj = np.minimum(zbw, -100. * np.abs(zaj))
@@ -265,7 +265,7 @@ class slpj:
         omln2  = N2.where(conds).sum('depth')
         omlprd = prd.where(conds).sum('depth')
 
-        zbw = -0.5/9.81 * omln2 * ( 2 * omlprd + 2. )
+        zbw = -0.5/CONST.g * omln2 * ( 2 * omlprd + 2. )
 
         zaj = (grady / e2t).where(conds).sum('depth') 
 

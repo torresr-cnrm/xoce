@@ -77,7 +77,7 @@ def decode_months_since(arr:np.ndarray, calendar='noleap'):
     months = m0 + dats % 12 // 1
     
     dpm    = np.take(_dayspermonth, months.astype('int')-1)
-    days   = (d0-1) + (dats % 12 % 1) * dpm // 1
+    days   = d0 + (dats % 12 % 1) * dpm // 1
             
     nhours = 24  *(dats % 12 % 1) * dpm % 1
     hours  = h0  + nhours

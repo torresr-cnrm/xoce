@@ -4,12 +4,11 @@
 
 import copy
 import os
-from typing import Hashable
 import numpy as np
 import xarray as xr
 
 from ..calc import CalcManager
-from ..utils.dataset_util import interp_coord, merge_coordinates
+from ..utils.dataset_util import check_dims, interp_coord, merge_coordinates
 from ..utils.datetime_util import decode_months_since
 from ..utils.io_util import extract_cmip6_variables, get_filename_from_drs
 from ..utils.io_util import load_cmip6_output
@@ -112,7 +111,14 @@ class Experiment:
         dataset = xr.Dataset(coords=self.coords)
         for v in self.variables:
             if v not in dataset.dims:
-                dataset[v] = self[v].where(conds, other, drop)
+                if set(conds.dims) <= set(self[v].dims):
+                    arr = self[v].where(conds, other, drop)
+                    dataset[v] = (arr.dims, arr.data)
+                    dataset[v].attrs = arr.attrs
+                elif check_dims(self[v], dataset.dims):
+                    arr = self[v]
+                    dataset[v] = (arr.dims, arr.data)
+                    dataset[v].attrs = arr.attrs
         
         return dataset
 
@@ -258,7 +264,7 @@ class CMIPExperiment(Experiment):
         fname = get_filename_from_drs(var, self._drs)
         abspath = os.path.join(self.path, fname)
         ds = xr.open_dataset(abspath, chunks=chunks)
-
+        
         # update experiment dims and coords
         for d in ds.dims:
             if d not in self.dims:

@@ -227,3 +227,19 @@ def assign_variable(ds, da, name=None, interpolate=True):
 
     ds[name] = array
 
+
+def check_dims(da, refdims):
+    """
+    Check if array dimensions and shape fit with a dictionnary
+    of reference dimensions.
+    """
+    status = True
+    for d, i in enumerate(da.dims) :
+        if d not in refdims :
+            status = False
+        else:
+            if refdims[d] != da.shape[i]:
+                status = False
+
+    return status
+

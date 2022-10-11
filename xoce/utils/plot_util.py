@@ -2,8 +2,6 @@
 Define functions and methods for plotting datas. 
 """
 
-from turtle import color
-from matplotlib.colors import colorConverter
 import numpy as np
 import numpy.ma as ma
 import xarray as xr
@@ -131,7 +129,7 @@ def get_variable_data(datas, var, mesh=None, filtering=True, lamtol=100,
             raise Exception()
 
         # 2. switch array to ensure longitude continuity
-        #   * indgap = indexes where longitude have discontinuity at latitude fixed
+        #   * indgap = indexes where longitude have discontinuity at fixed latitude
         indgap = np.where(np.abs(lons[:, :-1] - lons[:, 1:]) > lamtol)
 
         # re arange array to sort longitude coordinates (only if one gap is found)

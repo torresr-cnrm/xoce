@@ -6,6 +6,8 @@ import importlib.util
 import inspect
 import os
 
+from ..utils.grid_util import extract_coords
+
 
 class CalcManager:
     def __init__(self, dataset):
@@ -39,6 +41,7 @@ class CalcManager:
         prms = inspect.signature(func).parameters
 
         args = list()
+        lcls = list()
         for p in prms:
             if p in self._dataset.variables:
                 args.append(self._dataset[p])
@@ -47,9 +50,16 @@ class CalcManager:
             else:
                 args.append(self.calculate(p))
 
+            lcls.append(self._functions.get(p, None))
+
         # TODO: make a test on arguments shape and dimensions here ?? 
         # use calculate method which is defined for all functions
         darray = func(*tuple(args))
+
+        # re build coordinates (for instance, if computation made on U and V point)
+        if 'grid' in dir(clss) :
+            ncoords = extract_coords(args, lcls, clss.grid, skiped=darray.coords)
+            darray  = darray.assign_coords(ncoords)
 
         # finally change name and attributes
         darray.name = variable

@@ -17,7 +17,7 @@ class BoxClipper(XoceObject):
         "drop": {'type': bool,
                  'default': False},
         "inverse": {'type': bool,
-                    'default': False}
+                    'default': False},
     }
 
     def __init__(self, dataset=None, **kargs):

@@ -101,20 +101,27 @@ def split_dataset(dataset, dim, bounds, drop=False):
     return res
 
 
-def get_dim_axis(dataset, dim_names):
+def get_dim_axis(dataset, dim_names, skip_notfound=False):
     """
     Return the axis order af a `dataset` (could be both xr.Dataset or xr.DataArray)
-    corresponding to the desired dimensions in `dim_names` 
+    corresponding to the desired dimensions in dim_names. 
+    The option skip_notfound can be turn on to avoid raising error if dimension is 
+    only in dim_names list.
     """
-    axis  = list()
+    axis   = list()
+    skiped = list()
+
     for d in dim_names:
         if d not in dataset.dims:
-            raise Exception("'{}' is not in dataset dimensions: ".format(d) +
-                            "{}".format(list(dataset.dims)))
+            if skip_notfound:
+                skiped.append(list(dim_names).index(d))
+            else:
+                raise Exception("'{}' is not in dataset dimensions: ".format(d) +
+                                "{}".format(list(dataset.dims)))
         else:
             axis.append(list(dataset.dims).index(d))
 
-    return axis
+    return axis, skiped
 
 
 def broadcast_like(model, da:xr.DataArray):
@@ -126,8 +133,8 @@ def broadcast_like(model, da:xr.DataArray):
     res.name = da.name
     res.attrs = da.attrs
     
-    rshape = [1] * len(res.shape)
-    zaxis  = get_dim_axis(res, ['depth'])[0]
+    rshape   = [1] * len(res.shape)
+    zaxis, _ = get_dim_axis(res, ['depth'])[0]
     rshape[zaxis] = res.shape[zaxis]
     
     for d in res.dims:

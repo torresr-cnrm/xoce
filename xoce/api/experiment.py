@@ -8,7 +8,8 @@ import numpy as np
 import xarray as xr
 
 from ..calc import CalcManager
-from ..utils.dataset_util import check_dims, interp_coord, merge_coordinates
+from ..utils.dataset_util import check_dims, get_dim_axis, interp_coord 
+from ..utils.dataset_util import merge_coordinates
 from ..utils.datetime_util import decode_months_since
 from ..utils.io_util import extract_cmip6_variables, get_filename_from_drs
 from ..utils.io_util import load_cmip6_output
@@ -69,7 +70,9 @@ class Experiment:
             c = _DIM_COORDINATES.get(d, d)
             if c in array.coords and c in self.coords:
                 # linear interpolation if needed..
-                if (array[c].data == self.coords[c].data).sum() != array[c].size:
+                if array[c].shape != self.coords[c].shape:
+                    pass
+                elif (array[c].data == self.coords[c].data).sum() != array[c].size:
                     array = interp_coord(array, {c: self.coords[c]}, d, method='linear')
         
         return array
@@ -109,12 +112,21 @@ class Experiment:
 
     def where(self, conds, other=np.nan, drop=False):
         dataset = xr.Dataset(coords=self.coords)
+        
         for v in self.variables:
-            if v not in dataset.dims:
+            if v not in dataset.dims:  
+                # check dimensions shape and size
                 if set(conds.dims) <= set(self[v].dims):
-                    arr = self[v].where(conds, other, drop)
-                    dataset[v] = (arr.dims, arr.data)
-                    dataset[v].attrs = arr.attrs
+                    indx, skpd = get_dim_axis(self, self[v].dims, skip_notfound=True)
+                    
+                    var_shpe = np.delete(self[v].shape, skpd)
+                    shpe     = np.take(list(self.dims.values()), indx)
+                    
+                    if np.alltrue(shpe == var_shpe): 
+                        arr = self[v].where(conds, other, drop)
+                        dataset[v] = (arr.dims, arr.data)
+                        dataset[v].attrs = arr.attrs
+
                 elif check_dims(self[v], dataset.dims):
                     arr = self[v]
                     dataset[v] = (arr.dims, arr.data)

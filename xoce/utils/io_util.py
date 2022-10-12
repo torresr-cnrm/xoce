@@ -51,9 +51,15 @@ def variable_exists(fname, cmip_dict):
     fids = fname.split('_')
     bids = [False] * len(fids)
 
+    index = -1
     for i, fid in enumerate(fids):
-        if fid in cmip_dict[_cmip_ids[i]]:
-            bids[i] = True
+        if index == -1:
+            if fid in cmip_dict[_cmip_ids[i]]:
+                index = cmip_dict[_cmip_ids[i]].index(fid)
+                bids[i] = True
+        else:
+            if fid == cmip_dict[_cmip_ids[i]][index]:
+                bids[i] = True
 
     return sum(bids) == len(bids)
 

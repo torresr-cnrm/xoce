@@ -299,8 +299,7 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     ilab = 0
     while 'colorbar_id{}'.format(ilab) in labs:
         ilab += 1
-    xcb = xmap.figure.add_axes([0, 0, 0.01, 0.1], label='colorbar_id{}'.format(ilab))
-    xcb.axis('off')
+    xcb = xmap.figure.add_axes([0, 0, 0.1, 0.1], label='colorbar_id{}'.format(ilab))
 
     posn = xmap.get_position()
     xcb.set_position([posn.x0 + posn.width + 0.02, posn.y0, 0.01, posn.height])
@@ -322,11 +321,11 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
             colorbar.set_ticklabels(seq)
     else:
         if cbar_labels:
-            cbar = plt.colorbar(qmesh, ax=xcb, fraction=1, pad=0, 
+            cbar = plt.colorbar(qmesh, ax=xcb, cax=xcb, fraction=1, pad=0, 
                                 ticks=list(cbar_labels.values()))
             cbar.ax.set_yticklabels(list(cbar_labels.keys()))
         else:
-            plt.colorbar(qmesh, ax=xcb, fraction=1, pad=0)
+            cbar = plt.colorbar(qmesh, cax=xcb, fraction=1, pad=0)
 
     plt.close()
 

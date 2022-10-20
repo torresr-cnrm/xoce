@@ -98,6 +98,8 @@ class ShapiroFilter(XoceObject):
                 'default': ('x', 'y')},
         "variables": {'type': list,
                       'default': None},
+        "fill_nan": {'type': str, 
+                     'default': 'nan'}
     }
 
     def __init__(self, dataset=None, **kargs):
@@ -214,8 +216,13 @@ class ShapiroFilter(XoceObject):
             fslicers[axis[0]] = beforeslc
             fslicers[axis[1]] = beforeslc
             farr[tuple(fslicers)] += 1*da[tuple(aslicers)] 
-            
+
             farr = xr.where(mask, np.nan, farr * coefs)
+
+            # 3. Finally manage new nan (here cause of the algorithm)
+            if self.fill_nan == 'old':
+                farr = xr.where(np.isnan(farr) & ~mask, da, farr)
+
             filtered[v] = (farr.dims, farr.data)
 
         return filtered

@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 
 from ..calc import CalcManager
-from ..utils.dataset_util import check_dims, get_dim_axis, interp_coord 
+from ..utils.dataset_util import check_dims, get_dim_axis 
 from ..utils.dataset_util import merge_coordinates
 from ..utils.datetime_util import decode_months_since
 from ..utils.io_util import extract_cmip6_variables, get_filename_from_drs
@@ -65,15 +65,13 @@ class Experiment:
             else:
                 array = self.calculate(var)
 
-        # finally return the array      
+        # linear interpolation if needed      
         for d in array.dims :
             c = _DIM_COORDINATES.get(d, d)
-            if c in array.coords and c in self.coords:
-                # linear interpolation if needed..
-                if array[c].shape != self.coords[c].shape:
-                    pass
-                elif (array[c].data == self.coords[c].data).sum() != array[c].size:
-                    array = interp_coord(array, {c: self.coords[c]}, d, method='linear')
+            if c in self.coords:
+                if not np.alltrue(array[d].data == self.coords[c][d].data):
+                    array = array.interp(**{d: self.coords[c]}, 
+                                         kwargs={"fill_value": "extrapolate"})
         
         return array
 

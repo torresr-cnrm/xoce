@@ -32,9 +32,10 @@ class Integral(XoceObject):
         ds = self.dataset
 
         for dim in self.dims:
-            if dim not in ds.coords:
-                raise Exception("Integral error: '{}' ".format(dim) + 
-                            "is not in dataset coordinates {}".format(list(ds.coords)))
+            if dim not in ds.dims:
+                pass
+                #raise Exception("Integral error: '{}' ".format(dim) + 
+                #            "is not in dataset dimensions {}".format(list(ds.coords)))
 
         for var in self.variables:
             if var not in ds.variables:
@@ -65,10 +66,12 @@ class Integral(XoceObject):
             else:
                 cell_coefs = ds['surface']
 
+            idims = [d for d in dims if d in ds[var].dims]
+
             # keep nan to get masked arrays
-            vals  = (cell_coefs*ds[var]).sum(dim=dims)
-            conds = np.isnan(ds[var].sum(dim=dims, skipna=False))
-            conds = conds & (ds[var].sum(dim=dims, skipna=True) == 0.)
+            vals  = (cell_coefs*ds[var]).sum(dim=idims)
+            conds = np.isnan(ds[var].sum(dim=idims, skipna=False))
+            conds = conds & (ds[var].sum(dim=idims, skipna=True) == 0.)
             narray = xr.where(conds, np.nan, vals)
             
             narray.name = var

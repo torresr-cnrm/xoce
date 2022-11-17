@@ -2,6 +2,7 @@
 """
 
 import cftime
+import dask
 import numpy as np
 import xarray as xr
 
@@ -47,10 +48,14 @@ class AverageFilter(XoceObject):
         if period is None:
             period = (ds[self.dim][0], ds[self.dim][-1])
         
-        elif self.dim in ['time', 't'] and ds[self.dim].dtype == 'O':
+        elif self.dim in ['time', 't']: 
             # Converting to unregular datetime
-            dateinf = [int(ymd) for ymd in period[0].split('-')]
-            datesup = [int(ymd) for ymd in period[1].split('-')]
+            if ds[self.dim].dtype == 'O':
+                dateinf = [int(ymd) for ymd in period[0].split('-')]
+                datesup = [int(ymd) for ymd in period[1].split('-')]
+            elif ds[self.dim].dtype == '<M8[ns]':
+                dateinf = [period[0]]
+                datesup = [period[1]]
             period = (dimtype(*dateinf), dimtype(*datesup))
 
         coords = ds.coords
@@ -184,11 +189,11 @@ class ShapiroFilter(XoceObject):
             for a in axis:
                 aslicers[a] = beforeslc
                 fslicers[a] = afterslc
-                farr[tuple(fslicers)] += 2*da[tuple(aslicers)]
+                farr[tuple(fslicers)] += 2*da[tuple(aslicers)].data
 
                 aslicers[a] = afterslc
                 fslicers[a] = beforeslc
-                farr[tuple(fslicers)] += 2*da[tuple(aslicers)]
+                farr[tuple(fslicers)] += 2*da[tuple(aslicers)].data
 
                 aslicers[a] = slice(None, None, None)
                 fslicers[a] = slice(None, None, None)
@@ -197,25 +202,25 @@ class ShapiroFilter(XoceObject):
             aslicers[axis[1]] = beforeslc
             fslicers[axis[0]] = afterslc
             fslicers[axis[1]] = afterslc
-            farr[tuple(fslicers)] += 1*da[tuple(aslicers)]
+            farr[tuple(fslicers)] += 1*da[tuple(aslicers)].data
             
             aslicers[axis[0]] = beforeslc
             aslicers[axis[1]] = afterslc
             fslicers[axis[0]] = afterslc
             fslicers[axis[1]] = beforeslc
-            farr[tuple(fslicers)] += 1*da[tuple(aslicers)]
+            farr[tuple(fslicers)] += 1*da[tuple(aslicers)].data
 
             aslicers[axis[0]] = afterslc
             aslicers[axis[1]] = beforeslc
             fslicers[axis[0]] = beforeslc
             fslicers[axis[1]] = afterslc
-            farr[tuple(fslicers)] += 1*da[tuple(aslicers)]
+            farr[tuple(fslicers)] += 1*da[tuple(aslicers)].data
 
             aslicers[axis[0]] = afterslc
             aslicers[axis[1]] = afterslc
             fslicers[axis[0]] = beforeslc
             fslicers[axis[1]] = beforeslc
-            farr[tuple(fslicers)] += 1*da[tuple(aslicers)] 
+            farr[tuple(fslicers)] += 1*da[tuple(aslicers)].data
 
             farr = xr.where(mask, np.nan, farr * coefs)
 
@@ -224,6 +229,193 @@ class ShapiroFilter(XoceObject):
                 farr = xr.where(np.isnan(farr) & ~mask, da, farr)
 
             filtered[v] = (farr.dims, farr.data)
+
+        return filtered
+
+
+
+class CoarseningFilter(XoceObject):
+    """
+    Smooth some Dataset variables using coarsening algorithm.
+    """
+    _Parameters = {
+        "dims": {'type': list,
+                 'default': ('x', 'y')},
+        "factor": {'type': int,
+                   'default': 2},
+        "variables": {'type': list,
+                      'default': None},
+        "bnds_dim": {'type': str,
+                     'default': 'nbounds'},
+    }
+
+    def __init__(self, dataset=None, **kargs):
+        XoceObject.__init__(self, dataset)
+        
+        # add default processing parameter
+        self._set_default_parameters(**kargs)
+
+
+    def execute(self):
+        ds = self.dataset
+
+        dims = self.dims
+        if isinstance(self.dims, str):
+            dims = [self.dims]
+
+        bndim = self.bnds_dim
+
+        variables = self.variables
+        if variables is None:
+            variables = [v for v in ds.variables if v not in ds.coords]
+
+        # pre processing: create slicers for latter averaging + compute new coords
+        slicers = [slice(i, None, self.factor) for i in range(self.factor)]
+
+        coords = dict()
+        for c in ds.coords:
+            ncoordinate = xr.DataArray(ds.coords[c])
+
+            for d in dims:
+                co = ncoordinate
+                coord = 0.
+                if d in co.dims:
+                    ncells  = co.shape[co.dims.index(d)]
+                    nfulls = ncells % self.factor
+
+                    add_mean = co.isel({d: slicers[0]}).isel({d: [-1]})
+
+                    for i, slc in enumerate(slicers):
+                        sel = co.isel({d: slc})
+                        
+                        if i < nfulls:
+                            if i != 0:
+                                add_mean += co.isel({d: slicers[i]}).isel({d: [-1]})
+
+                        elif nfulls != 0:
+                            mean_data = (1/nfulls) * add_mean.data
+                            dim_axis = sel.dims.index(d)
+                            dat = np.concatenate( (sel.data, mean_data), axis=dim_axis)
+
+                            sel = xr.DataArray(data=dat, name=sel.name, dims=sel.dims)
+
+                        sel[d] = np.arange(len(sel[d]))
+                        if c in dims:
+                            sel.data  = sel[d].data
+
+                        coord += sel
+
+                if isinstance(coord, (int, float)) and coord == 0:
+                    ncoordinate = co
+                else:
+                    ncoordinate = coord / self.factor
+
+            coords[c] = ncoordinate
+
+        # final check to ensure coherent coordinates
+        for c in coords:
+            co = coords[c]
+            for cc in co.coords:
+                if cc in coords:
+                    co.coords[cc] = coords[cc]
+
+        # init filtered dataset
+        filtered = xr.Dataset(coords=coords)
+
+        for v in variables:
+            narray = xr.DataArray(ds[v])
+
+            for d in dims:
+                da = narray
+                arr = 0.
+                if d in da.dims:
+                    ncells  = da.shape[da.dims.index(d)]
+                    nfulls = ncells %  self.factor
+
+                    add_mean = da.isel({d: slicers[0]}).isel({d: [-1]})
+
+                    for i, slc in enumerate(slicers):
+                        sel = da.isel({d: slc})
+                        
+                        if i < nfulls:
+                            if i != 0:
+                                if bndim in da.dims:
+                                    bnd_axis = da.dims.index(bndim)
+                                    slc_list = [slice(None, None, None)] * len(da.dims)
+                                    sel_last = sel.isel({d: [-1]})
+
+                                    # minimum only
+                                    slc_list[bnd_axis] = slice(0, 1, None)
+                                    minv = np.minimum(add_mean[tuple(slc_list)], 
+                                                      sel_last[tuple(slc_list)])
+                                    add_mean[tuple(slc_list)] = minv * nfulls
+
+                                    # maximum only
+                                    slc_list[bnd_axis] = slice(-1, None, None)
+                                    maxv = np.maximum(add_mean[tuple(slc_list)], 
+                                                      sel_last[tuple(slc_list)])
+                                    add_mean[tuple(slc_list)] = maxv * nfulls
+                                else:
+                                    add_mean += da.isel({d: slicers[i]}).isel({d: [-1]})
+
+                        elif nfulls:
+                            mean_data = (1/nfulls) * add_mean.data
+                            dim_axis = sel.dims.index(d)
+                            dat = np.concatenate( (sel.data, mean_data), axis=dim_axis)
+
+                            if sel.chunks is None:
+                                chunks = {}
+                            else:
+                                chunks = sel.chunks
+
+                            sel = xr.DataArray(data=dat, name=sel.name, dims=sel.dims)
+
+                            if chunks:
+                                chunks = list(sel.chunks)
+                                dchnks = list(chunks[dim_axis])
+                                dchnks[-2] += dchnks[-1]
+
+                                del dchnks[-1]
+                                
+                                chunks[dim_axis] = tuple(dchnks)
+                                chunks = tuple(chunks)
+
+                            if isinstance(sel.data, dask.array.core.Array):
+                                sel = sel.chunk(chunks)
+                        
+                        sel[d] = np.arange(len(sel[d]))
+                        if v in dims:
+                            sel.data  = sel[d].data
+
+                        if not (bndim in sel.dims):
+                            arr += sel
+                        elif isinstance(arr, (int, float)) and arr == 0:
+                            arr = sel 
+                        else:
+                            # manage case of bnds variables (need to take min/max bnds)
+                            bnd_axis = arr.dims.index(bndim)
+                            slc_list = [slice(None, None, None)] * len(arr.dims)
+                            
+                            # minimum only
+                            slc_list[bnd_axis]   = slice(0, 1, None)
+                            arr[tuple(slc_list)] = np.minimum(arr[tuple(slc_list)], 
+                                                              sel[tuple(slc_list)])
+
+                            # maximum only
+                            slc_list[bnd_axis]   = slice(-1, None, None)
+                            arr[tuple(slc_list)] = np.maximum(arr[tuple(slc_list)], 
+                                                              sel[tuple(slc_list)])
+
+                if isinstance(arr, (int, float)) and arr == 0:
+                    narray = xr.DataArray(da)
+                else:
+                    narray = arr
+                    if not (bndim in arr.dims):
+                        narray /= self.factor
+
+            # add filtered variable
+            narray.name = v
+            xdsutil.assign_variable(filtered, narray)
 
         return filtered
 

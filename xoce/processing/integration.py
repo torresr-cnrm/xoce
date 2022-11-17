@@ -66,7 +66,10 @@ class Integral(XoceObject):
             else:
                 cell_coefs = ds['surface']
 
-            idims = [d for d in dims if d in ds[var].dims]
+            if dims is None:
+                idims = ds[var].dims
+            else:
+                idims = [d for d in dims if d in ds[var].dims]
 
             # keep nan to get masked arrays
             vals  = (cell_coefs*ds[var]).sum(dim=idims)

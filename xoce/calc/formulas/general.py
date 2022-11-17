@@ -2,9 +2,6 @@
 General stratified fluid formulas
 """
 
-from pandas import array
-from xoce.utils.dataset_util import array_diff
-
 
 class volume:
     long_name = 'Volume'

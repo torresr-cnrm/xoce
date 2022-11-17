@@ -36,6 +36,22 @@ def merge_coordinates(dataset, coords, diff='relative', tol=1e-6):
     return code
 
 
+def concatenate_arrays(larrays, dim, chunks=None):
+    """
+    Concatenate and rechunk the resulting array if necessary.
+    This function simply call the xarray.concat method and 
+    rechunk the final array to avoid bad dask usage.
+    """
+    arr = xr.concat(larrays, dim=dim)
+    
+    if chunks is None:
+        arr = arr.chunk({})
+    else:
+        arr = arr.chunk(chunks)
+
+    return arr
+
+
 def array_diff(da, dim='time', method='forward'):
     """
     Make a diff operation under a DataArray object along one dimension.
@@ -54,7 +70,7 @@ def array_diff(da, dim='time', method='forward'):
         dif = daa - dab
         lst = dif.isel({dim: [-1]})
         lst.coords[dim] = [da.coords[dim][-1]]
-        arr.data = xr.concat([dif, lst], dim=dim).data
+        arr.data = concatenate_arrays([dif, lst], dim=dim, chunks=da.chunks).data
 
     elif method == 'backward':
         dab = da.isel({dim: slice(0,-1,1)})
@@ -64,7 +80,7 @@ def array_diff(da, dim='time', method='forward'):
         dif = daa - dab
         fst = dif.isel({dim: [0]})
         fst.coords[dim] = [da.coords[dim][0]]
-        arr.data = xr.concat([fst, dif], dim=dim).data
+        arr.data = concatenate_arrays([fst, dif], dim=dim, chunks=da.chunks).data
 
     return arr
 
@@ -223,7 +239,7 @@ def assign_variable(ds, da, name=None, interpolate=True):
     """
     array = da
     for d in da.dims :
-        if d in ds.dims and (da[d].data == ds[d].data).sum() != da[d].size:
+        if d in ds.dims and not np.alltrue(da[d].data == ds[d].data):
             if interpolate:
                 array = array.interp({d:ds[d].data})
             else:

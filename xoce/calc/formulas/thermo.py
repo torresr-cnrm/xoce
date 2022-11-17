@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 from xoce.calc.formulas.constants import CONST
-from xoce.utils.dataset_util import array_diff, broadcast_like
+from xoce.utils.dataset_util import array_diff, broadcast_like, concatenate_arrays
 
 
 class rho:
@@ -97,11 +97,13 @@ class N2:
         # select thermal/haline coefficient and change 'depth' coordinates
         A1 = A.isel({'depth': slice(0,-1,1)})
         A1.coords['depth'] = A.coords['depth'][1:]
-        A1 = xr.concat([A.isel({'depth': [0]}), A1], dim='depth')
+        A1 = concatenate_arrays([A.isel({'depth': [0]}), A1], dim='depth', 
+                                chunks=A.chunks)
 
         B1 = B.isel({'depth': slice(0,-1,1)})
         B1.coords['depth'] = B.coords['depth'][1:]
-        B1 = xr.concat([B.isel({'depth': [0]}), B1], dim='depth')
+        B1 = concatenate_arrays([B.isel({'depth': [0]}), B1], dim='depth',
+                                chunks=B.chunks)
 
         alpha = (1 - rw) * A1 + (rw * A)
         beta  = (1 - rw) * B1 + (rw * B)
@@ -165,11 +167,10 @@ class M2:
     unit_long = ''
 
     def calculate(prd, e1t, e2t):
-        grdx = (array_diff(prd, dim='x'))
-        grdy = (array_diff(prd, dim='y'))
+        grdx = -1*CONST.g * array_diff(prd, dim='x')
+        grdy = -1*CONST.g * array_diff(prd, dim='y')
 
         m2 = ((grdx/e1t)**2. + (grdy/e2t)**2.)**0.5
-        m2.name = 'M2'
 
         return m2
 
@@ -195,7 +196,6 @@ class slpi:
         zbi = np.minimum(zbi, -7e3 / e3w_1d * np.abs(zai))
             
         slpi = (zai / (zbi + 1e-20))
-        slpi.name = 'wslpi'
 
         # special treatment for the mixed layer = slope just bellow the OML * coef
         nanmask = np.isnan(slpi)
@@ -250,7 +250,6 @@ class slpj:
         zbj = np.minimum(zbj, -7e3 / e3w_1d * np.abs(zaj))
             
         slpj = (zaj / (zbj + 1e-20))
-        slpj.name = 'wslpj'
 
         # special treatment for the mixed layer = slope just bellow the OML * coef
         nanmask = np.isnan(slpj)

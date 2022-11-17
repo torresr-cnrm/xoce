@@ -38,8 +38,8 @@ class Experiment:
 
     def __getitem__(self, var):
         if var in self.variables:
-            if var in self._arrays:
-                variable = self._arrays[var]
+            if var in self.arrays:
+                variable = self.arrays[var]
             elif var in self._mesh.variables:
                 variable = self._mesh[var]
             elif var in self.coords:
@@ -47,7 +47,7 @@ class Experiment:
             else:
                 lres = self.load_variable(var, chunks=self._chunks)
                 if lres is not None:
-                    variable = self._arrays[var]
+                    variable = self.arrays[var]
                 else:
                     raise KeyError("'{}' not found in the experiment.".format(var))
             
@@ -56,7 +56,7 @@ class Experiment:
                     variable = variable.isel({dim:0})
             
             self.add_variable(var, variable)
-            array = self._arrays[var]
+            array = self.arrays[var]
 
         else:
             if not self._calc.is_calculable(var):
@@ -72,7 +72,7 @@ class Experiment:
                 if not np.alltrue(array[d].data == self.coords[c][d].data):
                     array = array.interp(**{d: self.coords[c]}, 
                                          kwargs={"fill_value": "extrapolate"})
-        
+
         return array
 
 
@@ -85,7 +85,7 @@ class Experiment:
 
 
     # abstract method(s)
-    def load(self, chunks=None):
+    def load(self, chunks={}, replace_dict={}):
         raise Exception("'load' function not implemented.")
 
 
@@ -100,6 +100,14 @@ class Experiment:
     @property
     def attrs(self):
         return {}
+
+    @property
+    def arrays(self):
+        return self._arrays
+
+    @arrays.setter
+    def arrays(self, value):
+        self._arrays = value
 
     @property
     def variables(self):
@@ -137,13 +145,39 @@ class Experiment:
             names = name_dict
         
         for name in names:
-            if name in self._arrays:
-                self._arrays = self._arrays.rename(**{name:names[name]})
+            if name in self.arrays:
+                if isinstance(self.arrays, dict):
+                    for v in self.arrays:
+                        self.arrays[v] = self.arrays[v].rename(**{name:names[name]})
+                else:
+                    self.arrays = self.arrays.rename_dims(**{name:names[name]})
+            if name in self._coords:
+                self._coords[names[name]] = self._coords[name]
+                del self._coords[name]
 
+    def rename_dims(self, name_dict=None, **names):
+        if isinstance(name_dict, dict):
+            names = name_dict
+        
+        for name in names:
+            if isinstance(self.arrays, dict):
+                for v in self.arrays:
+                    self.arrays[v] = self.arrays[v].rename(**{name:names[name]})
+            else:
+                self.arrays = self.arrays.rename_dims(**{name:names[name]})
+
+        for co in self._coords:
+            for name in names:
+                if name in self._coords[co].dims:
+                    newc = self._coords[co].rename(**{name:names[name]})
+                    newc.coords[name] = newc.coords[names[name]]
+                    del newc.coords[names[name]]
+
+                    self._coords[name] = newc
 
     def add_variable(self, var, arr, rename_dims=True):
         """
-        Add new variable in the private self._arrays dictionary.
+        Add new variable in the private self.arrays dictionary.
         If the variable already exists, the function simply return 
         the desired array. 
         Warning: special treatment are made to get the real variable 
@@ -164,8 +198,8 @@ class Experiment:
             if arr.name in _VARS_NAME[type(self).__name__]:
                 arr.name = _VARS_NAME[type(self).__name__][arr.name]
 
-        if newvar not in self._arrays:
-            self._arrays[newvar] = arr
+        if newvar not in list(self.arrays):
+            self.arrays[newvar] = arr
         
         return newvar, arr
 
@@ -192,7 +226,7 @@ class Experiment:
             if arr.name in _VARS_NAME[type(self).__name__]:
                 arr.name = _VARS_NAME[type(self).__name__][arr.name]
 
-        if newvar not in self._arrays:
+        if newvar not in self.arrays:
             self._coords[newvar] = arr
         
         return newvar, arr
@@ -209,23 +243,45 @@ class SingleDatasetExperiment(Experiment):
     def __init__(self, path=None, fmesh=None):
         super().__init__(path, fmesh)
 
+    @property
+    def arrays(self):
+        return self._arrays
+
+    @arrays.setter
+    def arrays(self, ds):
+        self._arrays = ds
+        self._coords = ds.coords
+        self._dims   = ds.dims
 
     # abstract method(s) definition
-    def load(self, chunks=None):
-
+    def load(self, chunks={}, replace_dict={}):
+        """Loading output files."""
         try :
-            ds = xr.open_mfdataset(self.path, chunks=chunks)
+            ds = xr.open_mfdataset(self.path)
         except ValueError:
-            ds = xr.open_mfdataset(self.path, chunks=chunks, decode_times=False)
+            ds = xr.open_mfdataset(self.path, decode_times=False)
             ds = ds.assign_coords( {'time': decode_months_since(ds['time'])} )
+        
+        ds = ds.chunk(chunks)
         
         if self.fmesh:
             mesh = xr.open_dataset(self.fmesh)
             code_info = merge_coordinates(mesh, ds.coords)
-            if code_info == -1:
-                print("Warning: mesh and dataset coordinates are not everywhere equal.")
-            else:
-                self._mesh = mesh
+
+        # replace some variables values
+        for var in replace_dict:
+            newvar = replace_dict[var]   
+            inside = (var in mesh or var in mesh.dims)
+            inside = inside & (newvar in mesh or newvar in mesh.dims)
+            
+            if inside:
+                mesh = mesh.assign({var: mesh[newvar]})
+
+            inside = (var in ds or var in ds.dims)
+            inside = inside & (newvar in ds or newvar in ds.dims)
+            
+            if inside:
+                ds = ds.assign({var: mesh[newvar]})
 
         # rename some vars, coords or dims
         rename_dict = dict()
@@ -238,6 +294,11 @@ class SingleDatasetExperiment(Experiment):
         self._arrays = ds
         self._coords = ds.coords
         self._dims   = ds.dims
+
+        if code_info == -1:
+            print("Warning: mesh and dataset coordinates are not everywhere equal.")
+        else:
+            self._mesh = mesh
 
 
 class CMIPExperiment(Experiment):
@@ -252,18 +313,31 @@ class CMIPExperiment(Experiment):
 
 
     # abstract method(s) definition
-    def load(self, chunks=None):
+    def load(self, chunks={}, replace_dict={}):
+        """Loading output files."""
+
         self._chunks = chunks
         self._drs = load_cmip6_output(self.path)
+        
         if self.fmesh:
-            self._mesh = xr.open_dataset(self.fmesh)
+            mesh = xr.open_dataset(self.fmesh)
+            
+            # replace some variables values
+            for var in replace_dict:
+                newvar = replace_dict[var]
+                inside = (var in mesh or var in mesh.dims)
+                inside = inside & (newvar in mesh or newvar in mesh.dims)
+                if inside:
+                    mesh = mesh.assign({var: mesh[newvar]})
+            
+            self._mesh = mesh
 
 
     @property
     def variables(self):
         return super().variables + self._drs.get('variable_id', [])
 
-    def load_variable(self, var, chunks=None):
+    def load_variable(self, var, chunks={}):
         if not self._drs :
             self._drs = load_cmip6_output(self.path)
 

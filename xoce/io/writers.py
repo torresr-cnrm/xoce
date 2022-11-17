@@ -4,11 +4,26 @@
 import h5py
 import os
 import numpy as np
+import warnings
+
 from ..api.generic import XoceObject
+from ..utils.datetime_util import datetime_to_cftime
 
 
 def iowrapper(func):
     """Writer decorator."""
+    def inner(obj):
+        try:
+            func(obj)
+        except Exception as e:
+            # find a way to close file if error occur during reading/writing
+            # could be dangerous if file exists..
+            pass
+    
+    return inner
+
+def ioloopwrapper(func):
+    """Decorator for detecting."""
     def inner(obj):
         try:
             func(obj)
@@ -73,13 +88,26 @@ class H5pyWriter(XoceObject):
 
                 if co in ['time', 't']:
                     if arr.dtype == 'O':
-                        arr[co] = arr.indexes[co].to_datetimeindex()
-                        dtype = h5py.opaque_dtype(arr[co].dtype)
+                        try:
+                            arr[co] = arr.indexes[co].to_datetimeindex()
+                            dtype   = h5py.opaque_dtype(arr[co].dtype)
+                       
+                        except ValueError:
+                            dat     = np.arange(arr.size).reshape(arr.shape)
+                            dat     = dat.astype(dtype='datetime64[s]')
+                            arr     = arr.assign_coords( {co: datetime_to_cftime(dat)} )
+
+                            arr[co] = arr.indexes[co].to_datetimeindex()
+                            dtype   = h5py.opaque_dtype(arr[co].dtype)
                     else:
                         dtype = h5py.opaque_dtype(arr.dtype)
                     arr = arr.astype(dtype)
 
-                self._write_variable(co, arr, grp)
+                try:
+                    self._write_variable(co, arr, grp)
+                except Exception:
+                    warnings.warn("Error occured while writing the variable " +
+                                    "'{}' (ignored).".format(co))
                 
             # create variables
             for v in ds.variables:
@@ -90,8 +118,12 @@ class H5pyWriter(XoceObject):
                     arr = ds[v]
                     if self.reduce_mem and arr.dtype == 'float64':
                         arr = arr.astype('float32')
-                        
-                    self._write_variable(v, arr, grp)
+                    
+                    try:
+                        self._write_variable(v, arr, grp)
+                    except Exception:
+                        warnings.warn("Error occured while writing the variable " +
+                                      "'{}' (ignored).".format(v))
 
         f.close()
 

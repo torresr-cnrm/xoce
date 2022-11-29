@@ -150,7 +150,7 @@ class Experiment:
                     for v in self.arrays:
                         self.arrays[v] = self.arrays[v].rename(**{name:names[name]})
                 else:
-                    self.arrays = self.arrays.rename_dims(**{name:names[name]})
+                    self.arrays = self.arrays.rename(**{name:names[name]})
             if name in self._coords:
                 self._coords[names[name]] = self._coords[name]
                 del self._coords[name]
@@ -264,6 +264,7 @@ class SingleDatasetExperiment(Experiment):
         
         ds = ds.chunk(chunks)
         
+        code_info = 0
         if self.fmesh:
             mesh = xr.open_dataset(self.fmesh)
             code_info = merge_coordinates(mesh, ds.coords)
@@ -297,7 +298,7 @@ class SingleDatasetExperiment(Experiment):
 
         if code_info == -1:
             print("Warning: mesh and dataset coordinates are not everywhere equal.")
-        else:
+        elif self.fmesh:
             self._mesh = mesh
 
 

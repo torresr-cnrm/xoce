@@ -16,8 +16,8 @@ class rho:
     unit_long = 'kilogrammes per cube meter'
 
     def calculate(so, bigthetao, depth):
-        p = CONST.p0 + CONST.g*CONST.rho0*depth
-        return gsw.density.rho(so*10**-3, bigthetao, p/10**4)
+        p = CONST.g*CONST.rho0*depth
+        return gsw.density.rho(so, bigthetao, p/10**4)
 
 
 class rho_star:
@@ -40,6 +40,17 @@ class prd:
         return (rho / rho_ref) - 1
 
 
+class thetao:
+    long_name = 'Potential temperature'
+    standard_name = 'thetao'
+    units = 'degrees_C'
+    unit_long = 'degrees Celsius'
+
+    def calculate(so, tis, depth, p_ref=CONST.p0):
+        p = CONST.g*CONST.rho0*depth
+        return gsw.conversions.pt_from_t(so, tis, p/10**4, p_ref/10**4)
+
+
 class bigthetao:
     long_name = 'Conservative temperature'
     standard_name = 'bigthetao'
@@ -47,7 +58,7 @@ class bigthetao:
     unit_long = 'degrees Celsius'
 
     def calculate(so, thetao):
-        return gsw.conversions.CT_from_pt(so*10**-3, thetao)
+        return gsw.conversions.CT_from_pt(so, thetao)
 
 
 class N2:

@@ -85,6 +85,51 @@ def array_diff(da, dim='time', method='forward'):
     return arr
 
 
+def array_bnds(da, dim=None):
+    """
+    Compute DataArray boundaries.
+    """
+    if isinstance(dim, str):
+        dim = (dim,)
+
+    if not set(dim) <= set(da.dims):
+        raise Exception("'{}' is not included in DataArray dimension".format(dim))
+    elif dim is None:
+        dim = da.dims
+    
+    arr = xr.full_like(da, np.nan)
+    
+    arr.name = da.name + '_bnds'
+    arr = arr.expand_dims({'nbounds': 2**len(dim)}, axis=-1)
+
+    dshape = list(arr.shape)
+    dshape[-1] = 0
+
+    dbnds = xr.DataArray(np.ones(tuple(dshape)), dims=arr.dims)
+
+    for d in dim:
+        # uptream and downstream boundaries
+        dab = da.isel({d: slice(0,-1,1)})
+        daa = da.isel({d: slice(1,None,1)})
+        dab.coords[d] = daa.coords[d]
+
+        fst = da.isel({d: [0]})
+        lst = da.isel({d: [-1]})
+
+        dbnd1 = concatenate_arrays([fst, 0.5*(dab+daa)], dim=d, chunks=da.chunks)
+        dbnds = concatenate_arrays([dbnds, dbnd1], dim='nbounds', chunks=da.chunks)
+
+        dab.coords[d] = da.isel({d: slice(0,-1,1)}).coords[d]
+        daa.coords[d] = dab.coords[d]
+
+        dbnd2 = concatenate_arrays([0.5*(dab+daa), lst], dim=d, chunks=da.chunks)
+        dbnds = concatenate_arrays([dbnds, dbnd2], dim='nbounds', chunks=da.chunks)
+
+    arr.data = dbnds.data
+
+    return arr
+
+
 def split_dataset(dataset, dim, bounds, drop=False):
     """
     Split dataset and return a list of datasets (one for 

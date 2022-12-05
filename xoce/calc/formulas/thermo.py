@@ -67,8 +67,8 @@ class N2:
     """ 
     long_name = 'Brunt Vaisala frequency squared'
     standard_name = 'Nsquared'
-    units = 's-1'
-    unit_long = 'per second'
+    units = 's-2'
+    unit_long = 'per second squared'
 
     def calculate(thetao, so, depth, e3t):
         T = thetao
@@ -174,8 +174,8 @@ class M2:
     """ 
     long_name = 'Horizontal stratification'
     standard_name = 'Msquared'
-    units = ''
-    unit_long = ''
+    units = 's-2'
+    unit_long = 'per second squared'
 
     def calculate(prd, e1t, e2t):
         grdx = -1*CONST.g * array_diff(prd, dim='x')

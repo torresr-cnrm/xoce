@@ -19,7 +19,7 @@ from . import _DIM_COORDINATES, _VARS_NAME
 
 
 class Experiment:
-    def __init__(self, path=None, fmesh=None):
+    def __init__(self, path=None, fmesh=None, interpolation='linear'):
         self.path = path 
         self.fmesh = fmesh
 
@@ -32,7 +32,8 @@ class Experiment:
         self._mesh = xr.Dataset()                 # dict-like (should be xr.Dataset) obj
         self._calc = CalcManager(dataset=self)    # instance to compute off-line diag.
 
-        # loading options
+        # loading and array options
+        self.interpolation = interpolation
         self._unused_dims = list()
 
 
@@ -65,13 +66,17 @@ class Experiment:
             else:
                 array = self.calculate(var)
 
-        # linear interpolation if needed      
-        for d in array.dims :
-            c = _DIM_COORDINATES.get(d, d)
-            if c in self.coords:
-                if not np.alltrue(array[d].data == self.coords[c][d].data):
-                    array = array.interp(**{d: self.coords[c]}, 
-                                         kwargs={"fill_value": "extrapolate"})
+        # interpolation if needed  
+        if not self.interpolation:
+            return array
+        else:
+            method = self.interpolation
+            for d in array.dims :
+                c = _DIM_COORDINATES.get(d, d)
+                if c in self.coords:
+                    if not np.alltrue(array[d].data == self.coords[c][d].data):
+                        array = array.interp(**{d: self.coords[c]}, method=method,
+                                            kwargs={"fill_value": "extrapolate"})
 
         return array
 
@@ -111,7 +116,8 @@ class Experiment:
 
     @property
     def variables(self):
-        return list(self._arrays) + list(self._mesh) + list(self.coords)
+        return list(self._arrays) + list(self._mesh) + list(self.coords)  
+
 
     def calculate(self, var):
         return self._calc.calculate(var)
@@ -175,7 +181,7 @@ class Experiment:
 
                     self._coords[name] = newc
 
-    def add_variable(self, var, arr, rename_dims=True):
+    def add_variable(self, var, arr, rename_dims=True, assign=False):
         """
         Add new variable in the private self.arrays dictionary.
         If the variable already exists, the function simply return 
@@ -200,21 +206,33 @@ class Experiment:
 
         if newvar not in list(self.arrays):
             self.arrays[newvar] = arr
+        elif assign:
+            if isinstance(self.arrays, xr.Dataset):
+                self.arrays = self.arrays.assign({newvar: arr})
+            else:
+                self.arrays[newvar] = arr
+        else:
+            arr = self.arrays[newvar]
         
         return newvar, arr
 
-    def add_coordinate(self, var, arr, rename_dims=True):
+    def add_coordinate(self, var, arr, rename_dims=True, assign=False):
         """
         Add new coordinate in the private self._coords dictionary.
-        If the variable already exists, the function simply return 
-        the desired array. 
+        If the variable already exists, the function either return the
+        existing desired array if assign is False or replace the coordinate
+        if assign is True. 
         Warning: special treatment are made to get the real variable 
         name..
-        """
+        """           
+
         if var in list(_VARS_NAME[type(self).__name__].keys()):
             newvar = _VARS_NAME[type(self).__name__][var]
         else:
             newvar = var
+
+        if isinstance(arr, np.ndarray):
+            arr = xr.DataArray(arr, dims=(newvar))
 
         if rename_dims:
             rename_dict = dict()
@@ -226,8 +244,21 @@ class Experiment:
             if arr.name in _VARS_NAME[type(self).__name__]:
                 arr.name = _VARS_NAME[type(self).__name__][arr.name]
 
-        if newvar not in self.arrays:
+        if newvar not in self._coords:
             self._coords[newvar] = arr
+        elif assign:
+            if isinstance(self._coords, xr.core.coordinates.DatasetCoordinates):
+                ds_coords = self._coords.to_dataset().assign_coords({newvar: arr})
+                self._coords = ds_coords.coords
+            else:
+                self._coords[newvar] = arr
+        else:
+            arr = self._coords[newvar]
+        
+        # interpolate arrays if need
+        if isinstance(self.arrays, xr.Dataset) and newvar in self.arrays.coords:
+            self.arrays = self.arrays.interp({newvar: arr}, method=self.interpolation,
+                                            kwargs={"fill_value": "extrapolate"})
         
         return newvar, arr
 

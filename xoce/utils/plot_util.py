@@ -260,6 +260,7 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     shading = kargs.get('shading', 'auto')
     title = kargs.get('title', '')
     bcg = kargs.get('bgc', (0.75, 0.75, 0.75))
+    axes_labels = kargs.get('axes_labels', ['',''])
     cbar_labels = kargs.get('cbar_labels', {})
     colorbar = kargs.get('colorbar', None)
     orca_grid = kargs.get('orca_grid', True)
@@ -285,6 +286,9 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     if isinstance(xmap.projection, (ccrs._RectangularProjection, ccrs.Mercator)):
         xmap.set_xticks([-180,-120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
         xmap.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
+
+        xmap.set_xlabel(axes_labels[0])
+        xmap.set_ylabel(axes_labels[1])
 
     # plot data
     qmesh = xmap.pcolormesh(lons[:, :], lats[:, :], values[:, :], vmin=vbounds[0], 

@@ -19,9 +19,9 @@ from . import _DIM_COORDINATES, _VARS_NAME
 
 
 class Experiment:
-    def __init__(self, path=None, fmesh=None, interpolation='linear'):
-        self.path = path 
-        self.fmesh = fmesh
+    def __init__(self, path=None, interpolation='linear'):
+        self.path  = path 
+        self.fmesh = None
 
         # core dataset properties
         self._dims = dict()
@@ -93,6 +93,28 @@ class Experiment:
     def load(self, chunks={}, replace_dict={}):
         raise Exception("'load' function not implemented.")
 
+    def load_mesh(self, fmesh, replace_dict={}, rename={}):
+        if not os.path.isfile(fmesh):
+            raise Exception("Mesh file '{}' not found.".format(fmesh))
+        
+        # open the mesh dataset
+        mesh = xr.open_dataset(fmesh)
+
+        # replace some variables values
+        for var in replace_dict:
+            newvar = replace_dict[var]
+            inside = (var in mesh or var in mesh.dims)
+            inside = inside & (newvar in mesh or newvar in mesh.dims)
+            if inside:
+                mesh = mesh.assign({var: mesh[newvar]})
+
+        if rename:
+            mesh = mesh.rename(**rename)
+
+        # save object attributes
+        self._mesh = mesh
+        self.fmesh = fmesh
+
 
     @property
     def dims(self):
@@ -154,7 +176,8 @@ class Experiment:
             if name in self.arrays:
                 if isinstance(self.arrays, dict):
                     for v in self.arrays:
-                        self.arrays[v] = self.arrays[v].rename(**{name:names[name]})
+                        if name in self.arrays[v]:
+                            self.arrays[v] = self.arrays[v].rename(**{name:names[name]})
                 else:
                     self.arrays = self.arrays.rename(**{name:names[name]})
             if name in self._coords:
@@ -168,7 +191,8 @@ class Experiment:
         for name in names:
             if isinstance(self.arrays, dict):
                 for v in self.arrays:
-                    self.arrays[v] = self.arrays[v].rename(**{name:names[name]})
+                    if name in self.arrays[v].dims:
+                        self.arrays[v] = self.arrays[v].rename(**{name:names[name]})
             else:
                 self.arrays = self.arrays.rename_dims(**{name:names[name]})
 
@@ -271,8 +295,8 @@ class Experiment:
 
 
 class SingleDatasetExperiment(Experiment):
-    def __init__(self, path=None, fmesh=None):
-        super().__init__(path, fmesh)
+    def __init__(self, path=None):
+        super().__init__(path)
 
     @property
     def arrays(self):
@@ -294,26 +318,14 @@ class SingleDatasetExperiment(Experiment):
             ds = ds.assign_coords( {'time': decode_months_since(ds['time'])} )
         
         ds = ds.chunk(chunks)
-        
-        code_info = 0
-        if self.fmesh:
-            mesh = xr.open_dataset(self.fmesh)
-            code_info = merge_coordinates(mesh, ds.coords)
 
         # replace some variables values
         for var in replace_dict:
             newvar = replace_dict[var]   
-            inside = (var in mesh or var in mesh.dims)
-            inside = inside & (newvar in mesh or newvar in mesh.dims)
-            
-            if inside:
-                mesh = mesh.assign({var: mesh[newvar]})
-
             inside = (var in ds or var in ds.dims)
             inside = inside & (newvar in ds or newvar in ds.dims)
-            
             if inside:
-                ds = ds.assign({var: mesh[newvar]})
+                ds = ds.assign({var: ds[newvar]})
 
         # rename some vars, coords or dims
         rename_dict = dict()
@@ -327,18 +339,14 @@ class SingleDatasetExperiment(Experiment):
         self._coords = ds.coords
         self._dims   = ds.dims
 
-        if code_info == -1:
-            print("Warning: mesh and dataset coordinates are not everywhere equal.")
-        elif self.fmesh:
-            self._mesh = mesh
 
 
 class CMIPExperiment(Experiment):
     """
     Experiment data container based on CMIP6 protocole.
     """
-    def __init__(self, path=None, fmesh=None):
-        super().__init__(path, fmesh)
+    def __init__(self, path=None):
+        super().__init__(path)
 
         # child properties
         self._drs  = dict()         # data reference syntax: variableID_tableID_ .. .nc
@@ -350,19 +358,6 @@ class CMIPExperiment(Experiment):
 
         self._chunks = chunks
         self._drs = load_cmip6_output(self.path)
-        
-        if self.fmesh:
-            mesh = xr.open_dataset(self.fmesh)
-            
-            # replace some variables values
-            for var in replace_dict:
-                newvar = replace_dict[var]
-                inside = (var in mesh or var in mesh.dims)
-                inside = inside & (newvar in mesh or newvar in mesh.dims)
-                if inside:
-                    mesh = mesh.assign({var: mesh[newvar]})
-            
-            self._mesh = mesh
 
 
     @property

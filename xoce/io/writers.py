@@ -5,6 +5,7 @@ import h5py
 import os
 import numpy as np
 import warnings
+import xoce
 
 from ..api.generic import XoceObject
 from ..utils.datetime_util import datetime_to_cftime
@@ -70,6 +71,7 @@ class H5pyWriter(XoceObject):
         
         realname = os.path.join(self.path, self.filename)
         f = h5py.File(realname, 'w')
+        f.attrs['xoce_version'] = xoce.__version__
 
         for ds in datasets:
             name = ds.attrs.get('name', 'dataset')

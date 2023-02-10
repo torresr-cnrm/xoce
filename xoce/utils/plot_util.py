@@ -264,6 +264,7 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     cbar_labels = kargs.get('cbar_labels', {})
     colorbar = kargs.get('colorbar', None)
     orca_grid = kargs.get('orca_grid', True)
+    glines = kargs.get('gridlines', True)
 
     # add general information about axis
     if title:
@@ -280,15 +281,23 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
         vbounds = (colorbar.vmin, colorbar.vmax)
 
     xmap.coastlines()
-    xmap.gridlines()
     xmap.background_patch.set_facecolor(bcg)
 
+    if glines:
+        xmap.gridlines()
+
+    coef_y = 0.1
+
     if isinstance(xmap.projection, (ccrs._RectangularProjection, ccrs.Mercator)):
-        xmap.set_xticks([-180,-120, -60, 0, 60, 120, 180], crs=ccrs.PlateCarree())
-        xmap.set_yticks([-90, -60, -30, 0, 30, 60, 90], crs=ccrs.PlateCarree())
+        xmap.set_xticks([-150,-100, -50, 0, 50, 100, 150], crs=ccrs.PlateCarree())
+        xmap.set_xticklabels(['150W', '100W', '50W', '0', '50E', '100E', '150E'])
+
+        xmap.set_yticks([-80, -60, -40, -20, 0, 20, 40, 60, 80], crs=ccrs.PlateCarree())
 
         xmap.set_xlabel(axes_labels[0])
         xmap.set_ylabel(axes_labels[1])
+
+        coef_y = 0.15
 
     # plot data
     qmesh = xmap.pcolormesh(lons[:, :], lats[:, :], values[:, :], vmin=vbounds[0], 
@@ -309,6 +318,17 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     xcb.set_position([posn.x0 + posn.width + 0.02, posn.y0, 0.01, posn.height])
 
     if colorbar is not None:
+        if colorbar.orientation == 'horizontal':
+            cb_position = [posn.x0 + 0.1 * posn.width, 
+                           posn.y0 - coef_y * posn.height, 
+                           posn.width * 0.8,
+                           0.03]
+            
+            if colorbar.__dict__.get('position', '') == 'top':
+                cb_position[1] = posn.y0 + posn.height + 0.03
+
+            xcb.set_position(cb_position)
+
         colorbar.ax = xcb
         colorbar.cax = xcb
         
@@ -323,6 +343,10 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
             colorbar.set_ticks(locs)
         if list(seq):
             colorbar.set_ticklabels(seq)
+
+        if colorbar.__dict__.get('position', '') == 'top':
+            xcb.xaxis.tick_top()
+
     else:
         if cbar_labels:
             cbar = plt.colorbar(qmesh, cax=xcb, fraction=1, pad=0, 

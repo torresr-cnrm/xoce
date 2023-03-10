@@ -9,6 +9,39 @@ from xoce.calc.formulas.constants import CONST
 from xoce.utils.dataset_util import array_diff, broadcast_like, concatenate_arrays
 
 
+
+class thetao:
+    long_name = 'Potential temperature'
+    standard_name = 'thetao'
+    units = 'degrees_C'
+    unit_long = 'degrees Celsius'
+
+    def calculate(so, tis, depth, p_ref=CONST.p0):
+        p = CONST.g*CONST.rho0*depth
+        return gsw.conversions.pt_from_t(so, tis, p/10**4, p_ref/10**4)
+
+
+class bigthetao:
+    long_name = 'Conservative temperature'
+    standard_name = 'bigthetao'
+    units = 'degrees_C'
+    unit_long = 'degrees Celsius'
+
+    def calculate(so, thetao):
+        return gsw.conversions.CT_from_pt(so, thetao)
+
+
+class so:
+    long_name = 'Absolute seawater salinity'
+    standard_name = 'absolute_salinity'
+    units = 'g kg-1'
+    unit_long = 'grammes per kilogrammes of water'
+
+    def calculate(sp, depth, longitude, latitude, p_ref=CONST.p0):
+        p = CONST.g*CONST.rho0*depth
+        return gsw.conversions.SA_from_SP(sp, p/10**4, longitude, latitude)
+
+
 class rho:
     long_name = 'In-situ density'
     standard_name = 'density'
@@ -38,28 +71,6 @@ class prd:
 
     def calculate(rho, rho_ref=CONST.rho0):
         return (rho / rho_ref) - 1
-
-
-class thetao:
-    long_name = 'Potential temperature'
-    standard_name = 'thetao'
-    units = 'degrees_C'
-    unit_long = 'degrees Celsius'
-
-    def calculate(so, tis, depth, p_ref=CONST.p0):
-        p = CONST.g*CONST.rho0*depth
-        return gsw.conversions.pt_from_t(so, tis, p/10**4, p_ref/10**4)
-
-
-class bigthetao:
-    long_name = 'Conservative temperature'
-    standard_name = 'bigthetao'
-    units = 'degrees_C'
-    unit_long = 'degrees Celsius'
-
-    def calculate(so, thetao):
-        return gsw.conversions.CT_from_pt(so, thetao)
-
 
 class N2:
     """
@@ -167,6 +178,21 @@ class N2:
         
         return za, zb
 
+
+class N2_lowerlimit:
+    """
+    Minimum Brunt-Vaisala frequency squared.
+    """
+    long_name = 'Horizontal stratification'
+    standard_name = 'Msquared'
+    units = 's-2'
+    unit_long = 'per second squared'
+
+    def calculate(depth):
+        p      = CONST.g*CONST.rho0*depth
+        N2_min = (0.25 + 0.75*(np.exp(-(p/10**4)/1000))) * 1e-7
+        
+        return N2_min / (4*np.pi**2)
 
 class M2:
     """

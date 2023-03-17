@@ -233,7 +233,6 @@ class ShapiroFilter(XoceObject):
         return filtered
 
 
-
 class CoarseningFilter(XoceObject):
     """
     Smooth some Dataset variables using coarsening algorithm.

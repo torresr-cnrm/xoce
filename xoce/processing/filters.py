@@ -83,7 +83,7 @@ class AverageFilter(XoceObject):
                 vmean  = sliced.mean(dim=self.dim)
 
                 if self.inverse:
-                    narray = ds[v] - vmean
+                    narray = ds[v] - vmean.load()
                 else:
                     narray = vmean.expand_dims({self.dim:filtered[self.dim]})
                 

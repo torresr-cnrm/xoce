@@ -111,7 +111,9 @@ def array_bnds(da, dim=None):
         # uptream and downstream boundaries
         dab = da.isel({d: slice(0,-1,1)})
         daa = da.isel({d: slice(1,None,1)})
-        dab.coords[d] = daa.coords[d]
+        for c in daa.coords:
+            if d in daa.coords[c].dims:
+                dab.coords[c] = daa.coords[c]
 
         fst = da.isel({d: [0]})
         lst = da.isel({d: [-1]})
@@ -119,8 +121,10 @@ def array_bnds(da, dim=None):
         dbnd1 = concatenate_arrays([fst, 0.5*(dab+daa)], dim=d, chunks=da.chunks)
         dbnds = concatenate_arrays([dbnds, dbnd1], dim='nbounds', chunks=da.chunks)
 
-        dab.coords[d] = da.isel({d: slice(0,-1,1)}).coords[d]
-        daa.coords[d] = dab.coords[d]
+        for c in da.coords:
+            if d in da.coords[c].dims:
+                dab.coords[c] = da.isel({d: slice(0,-1,1)}).coords[c]
+                daa.coords[c] = dab.coords[c]
 
         dbnd2 = concatenate_arrays([0.5*(dab+daa), lst], dim=d, chunks=da.chunks)
         dbnds = concatenate_arrays([dbnds, dbnd2], dim='nbounds', chunks=da.chunks)

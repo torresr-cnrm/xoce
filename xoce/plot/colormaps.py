@@ -56,6 +56,9 @@ def _get_colormap(cmap, colors=None):
     elif isinstance(colors, list):
         nc = len(colors)
         colormap = clrs.LinearSegmentedColormap.from_list(cmap, colors)
+
+    elif isinstance(cmap, clrs.Colormap):
+        return cmap
     
     if colormap is None:
         raise Exception("Colormap '{}' not found.".format(cmap))

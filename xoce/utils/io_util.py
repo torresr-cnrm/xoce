@@ -114,19 +114,23 @@ def get_filename_from_drs(variable_id, cmip_dict):
     """
     Return real filename from CMIP6 DRQ dict.
     """
-    try:
-        ivar = cmip_dict['variable_id'].index(variable_id)
-    except ValueError:
-        print("Variable '{}' not in Data Reference Syntax.".format(variable_id))
-        return ''
-
-    varids = []
-    for id in _cmip_ids:
-        if cmip_dict[id][ivar] != '':
-            varids.append(cmip_dict[id][ivar])
+    inds = [i for i, x in enumerate(cmip_dict['variable_id']) if x == variable_id]
     
-    filename = '_'.join(varids)
-    filename += '.nc'
+    if not inds:
+        print("Variable '{}' not in Data Reference Syntax.".format(variable_id))
+        return []
 
-    return filename
+    filenames = list()
+    for ivar in inds:
+        varids = []
+        for id in _cmip_ids:
+            if cmip_dict[id][ivar] != '':
+                varids.append(cmip_dict[id][ivar])
+        
+        fname = '_'.join(varids)
+        fname += '.nc'
+
+        filenames.append(fname)
+
+    return filenames
 

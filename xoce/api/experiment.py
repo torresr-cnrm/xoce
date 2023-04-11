@@ -372,9 +372,19 @@ class CMIPExperiment(Experiment):
             raise Exception("No file match `variable_id = {}`".format(var) + 
                             "in directory: {}".format(self.path))
         
-        fname = get_filename_from_drs(var, self._drs)
-        abspath = os.path.join(self.path, fname)
+        filenames = sorted(get_filename_from_drs(var, self._drs))
+
+        abspath = os.path.join(self.path, filenames[0])
         ds = xr.open_dataset(abspath, chunks=chunks)
+
+        for fname in filenames[1:]:
+            abspath = os.path.join(self.path, fname)
+            new_ds  = xr.open_dataset(abspath, chunks=chunks)
+
+            d_dims  = np.array(ds[var].shape) - np.array(new_ds[var].shape)
+            i_dims  = np.where(d_dims != 0)[0][0]
+
+            ds      = xr.concat( (ds, new_ds), dim=ds[var].dims[i_dims])
         
         # update experiment dims and coords
         for d in ds.dims:

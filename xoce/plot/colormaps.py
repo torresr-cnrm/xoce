@@ -9,7 +9,6 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-
 _XOCE_COLORLIST = {
     'Groeskamp': [(0.361, 0.310, 0.624), (0.286, 0.529, 0.718), (0.502, 0.761, 0.655),
                   (0.702, 0.871, 0.659), (0.861, 0.905, 0.581), (0.984, 0.992, 0.788),
@@ -38,7 +37,11 @@ _XOCE_COLORLIST = {
 
     'BlMRd': [(0.094, 0.282, 0.471), (0.420, 0.686, 0.890), (.98, .98, .90), 
               (0.714, 0.337, 0.235), (0.467, 0.051, 0.027),
-             ]
+             ],
+
+    'blues':  list(plt.get_cmap('bwr')(np.arange(0, 128, 1)))[::-1],
+    'reds' :  list(plt.get_cmap('bwr')(np.arange(127, 256, 1))), 
+
 }
 
 

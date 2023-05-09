@@ -9,7 +9,6 @@ import xarray as xr
 
 from ..calc import CalcManager
 from ..utils.dataset_util import check_dims, get_dim_axis 
-from ..utils.dataset_util import merge_coordinates
 from ..utils.datetime_util import decode_months_since
 from ..utils.io_util import extract_cmip6_variables, get_filename_from_drs
 from ..utils.io_util import load_cmip6_output
@@ -372,19 +371,24 @@ class CMIPExperiment(Experiment):
             raise Exception("No file match `variable_id = {}`".format(var) + 
                             "in directory: {}".format(self.path))
         
-        filenames = sorted(get_filename_from_drs(var, self._drs))
+        var_drs = extract_cmip6_variables([var], 'variable_id', self._drs)
+        var_tr  = sorted(var_drs['time_range'])
+        var_ind = var_drs['time_range'].index(var_tr[0])
 
-        abspath = os.path.join(self.path, filenames[0])
+        fname   = get_filename_from_drs(var, {k: [var_drs[k][var_ind]] for k in var_drs})
+
+        abspath = os.path.join(self.path, fname)
         ds = xr.open_dataset(abspath, chunks=chunks)
 
-        for fname in filenames[1:]:
+        # -- concat time_range if necessary
+        for tr in var_tr[1:]:
+            i       = var_drs['time_range'].index(tr)
+            fname   = get_filename_from_drs(var, {k: [var_drs[k][i]] for k in var_drs})
+
             abspath = os.path.join(self.path, fname)
             new_ds  = xr.open_dataset(abspath, chunks=chunks)
 
-            d_dims  = np.array(ds[var].shape) - np.array(new_ds[var].shape)
-            i_dims  = np.where(d_dims != 0)[0][0]
-
-            ds      = xr.concat( (ds, new_ds), dim=ds[var].dims[i_dims])
+            ds      = xr.concat( (ds, new_ds), dim='time')
         
         # update experiment dims and coords
         for d in ds.dims:

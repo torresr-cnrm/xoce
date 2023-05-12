@@ -100,9 +100,11 @@ class ShapiroFilter(XoceObject):
     """
     _Parameters = {
         "dims": {'type': list,
-                'default': ('x', 'y')},
+                 'default': ('x', 'y')},
         "variables": {'type': list,
                       'default': None},
+        "periodicity": {'type': str,
+                        'default': None},
         "fill_nan": {'type': str, 
                      'default': 'nan'}
     }
@@ -138,9 +140,17 @@ class ShapiroFilter(XoceObject):
                                     "{}".format(list(da.dims)))
                 else:
                     axis.append(list(da.dims).index(d))
-            
-            # 1. Compute shapiro coefficients
 
+            iper = None
+            if self.periodicity is not None:
+                if self.periodicity in self.dims:
+                    iper = list(da.dims).index(self.periodicity)
+                else:
+                    print("ShapiroFilter warning: '{}' not".format(self.periodicity) + 
+                          " in 2d filter dimensions ({}).".format(self.dims) +
+                          " {}-periodicity ignored".format(self.periodicity))
+
+            # 1. Compute shapiro coefficients
             # -- prepare auto-slicers
             coefs = xr.full_like(da, 1) / (2**(2*len(axis)))
 
@@ -150,28 +160,37 @@ class ShapiroFilter(XoceObject):
 
             # -- change domain border coefs.
             for a in axis:
-                slicers[a] = frstslc
-                coefs[tuple(slicers)] = 1/12.
-                slicers[a] = lastslc
-                coefs[tuple(slicers)] = 1/12.
-                slicers[a] = slice(None, None, None)
+                if iper is None or a == iper:
+                    slicers[a] = frstslc
+                    coefs[tuple(slicers)] = 1/12.
+                    slicers[a] = lastslc
+                    coefs[tuple(slicers)] = 1/12.
+                    slicers[a] = slice(None, None, None)
 
             # -- change domain corner coefs.
             slicers[axis[0]] = frstslc
             slicers[axis[1]] = frstslc
             coefs[tuple(slicers)] = 1/9.
+            if iper is not None:
+                coefs[tuple(slicers)] = 1/12.
             
             slicers[axis[0]] = frstslc
             slicers[axis[1]] = lastslc
             coefs[tuple(slicers)] = 1/9.
+            if iper is not None:
+                coefs[tuple(slicers)] = 1/12.
 
             slicers[axis[0]] = lastslc
             slicers[axis[1]] = frstslc
             coefs[tuple(slicers)] = 1/9.
+            if iper is not None:
+                coefs[tuple(slicers)] = 1/12.
 
             slicers[axis[0]] = lastslc
             slicers[axis[1]] = lastslc
             coefs[tuple(slicers)] = 1/9.
+            if iper is not None:
+                coefs[tuple(slicers)] = 1/12.
 
             # 2. Compute filtered array
             mask = np.isnan(da)
@@ -221,6 +240,48 @@ class ShapiroFilter(XoceObject):
             fslicers[axis[0]] = beforeslc
             fslicers[axis[1]] = beforeslc
             farr[tuple(fslicers)] += 1*da[tuple(aslicers)].data
+
+            # -- periodicity
+            if iper is not None:          
+                nper = axis[0]
+                if iper == nper:
+                    nper = axis[1]
+
+                aslicers[iper] = slice(None, None, None)
+                aslicers[nper] = slice(-1, None, 1)
+                fslicers[iper] = slice(None, None, None)
+                fslicers[nper] = slice(0, 1, 1)
+                farr[tuple(fslicers)] += 2*da[tuple(aslicers)].data
+
+                aslicers[iper] = slice(None, None, None)
+                aslicers[nper] = slice(0, 1, 1)
+                fslicers[iper] = slice(None, None, None)
+                fslicers[nper] = slice(-1, None, 1)
+                farr[tuple(fslicers)] += 2*da[tuple(aslicers)].data
+
+                aslicers[iper] = beforeslc
+                aslicers[nper] = slice(-1, None, 1)
+                fslicers[iper] = afterslc
+                fslicers[nper] = slice(0, 1, 1)
+                farr[tuple(fslicers)] += 1*da[tuple(aslicers)].data
+
+                aslicers[iper] = afterslc
+                aslicers[nper] = slice(-1, None, 1)
+                fslicers[iper] = beforeslc
+                fslicers[nper] = slice(0, 1, 1)
+                farr[tuple(fslicers)] += 1*da[tuple(aslicers)].data
+
+                aslicers[iper] = beforeslc
+                aslicers[nper] = slice(0, 1, 1)
+                fslicers[iper] = afterslc
+                fslicers[nper] = slice(-1, None, 1)
+                farr[tuple(fslicers)] += 1*da[tuple(aslicers)].data
+
+                aslicers[iper] = afterslc
+                aslicers[nper] = slice(0, 1, 1)
+                fslicers[iper] = beforeslc
+                fslicers[nper] = slice(-1, None, 1)
+                farr[tuple(fslicers)] += 1*da[tuple(aslicers)].data
 
             farr = xr.where(mask, np.nan, farr * coefs)
 

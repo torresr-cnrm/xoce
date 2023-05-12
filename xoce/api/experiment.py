@@ -377,7 +377,7 @@ class CMIPExperiment(Experiment):
 
         fname   = get_filename_from_drs(var, {k: [var_drs[k][var_ind]] for k in var_drs})
 
-        abspath = os.path.join(self.path, fname)
+        abspath = os.path.join(self.path, fname[0])
         ds = xr.open_dataset(abspath, chunks=chunks)
 
         # -- concat time_range if necessary
@@ -385,7 +385,7 @@ class CMIPExperiment(Experiment):
             i       = var_drs['time_range'].index(tr)
             fname   = get_filename_from_drs(var, {k: [var_drs[k][i]] for k in var_drs})
 
-            abspath = os.path.join(self.path, fname)
+            abspath = os.path.join(self.path, fname[0])
             new_ds  = xr.open_dataset(abspath, chunks=chunks)
 
             ds      = xr.concat( (ds, new_ds), dim='time')

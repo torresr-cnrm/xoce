@@ -86,16 +86,19 @@ class H5pyReader(XoceObject):
                         cname = c
                         if isinstance(c, (bytes)):
                             cname = c.decode('utf-8')
+
                         cdats = grp[cname][()]
                         if 'datetime' in cdats.dtype.__str__():
                             cdats = datetime_to_cftime(cdats)
                         
                         if 'DIMENSION_LABELS' in grp[cname].attrs:
                             cdims = list(grp[cname].attrs['DIMENSION_LABELS'])
+                            cdims = [str(d) for d in cdims]
                         else:
                             cdims = list()
-
+                            
                         coords[cname] = xr.DataArray(cdats, name=cname, dims=cdims)
+
                 else:
                     coords = None
 

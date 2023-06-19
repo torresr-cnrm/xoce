@@ -160,7 +160,7 @@ class ShapiroFilter(XoceObject):
 
             # -- change domain border coefs.
             for a in axis:
-                if iper is None or a != iper:
+                if iper is None or a == iper:
                     slicers[a] = frstslc
                     coefs[tuple(slicers)] = 1/12.
                     slicers[a] = lastslc

@@ -215,7 +215,7 @@ def broadcast_like(model, da:xr.DataArray):
 def interp_coord(da, coords, dim, method='linear'):
     """
     Interpolate an array with a new coordinate array.
-    Only 1D interpolation is allowed which means pnly one coordinate in 
+    Only 1D interpolation is allowed which means only one coordinate in 
     the dictionary coords.
     """
     def _delta(a, i):

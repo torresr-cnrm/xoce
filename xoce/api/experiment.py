@@ -144,7 +144,17 @@ class Experiment:
         return self._calc.calculate(var)
 
     def where(self, conds, other=np.nan, drop=False):
-        dataset = xr.Dataset(coords=self.coords)
+        coords = dict()
+        for c in self.coords:
+            if set(conds.dims) <= set(self.coords[c].dims):
+                if drop:
+                    coords[c] = self.coords[c].where(conds, drop=drop)
+                else:
+                    coords[c] = self.coords[c].where(conds, other, drop=drop)
+            else:
+                coords[c] = self.coords[c]
+
+        dataset = xr.Dataset(coords=coords)
         
         for v in self.variables:
             if v not in dataset.dims:  
@@ -155,8 +165,11 @@ class Experiment:
                     var_shpe = np.delete(self[v].shape, skpd)
                     shpe     = np.take(list(self.dims.values()), indx)
                     
-                    if np.alltrue(shpe == var_shpe): 
-                        arr = self[v].where(conds, other, drop)
+                    if np.alltrue(shpe == var_shpe):
+                        if drop:
+                            arr = self[v].where(conds, drop=drop)
+                        else:
+                            arr = self[v].where(conds, other, drop=drop)
                         dataset[v] = (arr.dims, arr.data)
                         dataset[v].attrs = arr.attrs
 

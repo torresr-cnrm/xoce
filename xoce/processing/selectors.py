@@ -38,8 +38,24 @@ class BoxClipper(XoceObject):
         # coordinates selection
         coords = {c: ds.coords[c] for c in ds.coords if c not in self.box}
         for dim in self.box:
-            conds  = (ds[dim] >= self.box[dim][0])
-            conds  = conds & (ds[dim] <= self.box[dim][1])
+            bounds  = self.box[dim]
+            dimtype = type(ds[dim].data[0])
+
+            if bounds is None:
+                bounds = (ds[dim][0], ds[dim][-1])
+            
+            elif dim in ['time', 't']: 
+                # Converting to unregular datetime
+                if ds[dim].dtype == 'O':
+                    dateinf = [int(ymd) for ymd in bounds[0].split('-')]
+                    datesup = [int(ymd) for ymd in bounds[1].split('-')]
+                elif ds[self.dim].dtype == '<M8[ns]':
+                    dateinf = [bounds[0]]
+                    datesup = [bounds[1]]
+                bounds = (dimtype(*dateinf), dimtype(*datesup))
+
+            conds  = (ds[dim] >= bounds[0])
+            conds  = conds & (ds[dim] <= bounds[1])
             if self.inverse:
                 sliced = ds[dim].where(~conds, drop=self.drop)
             else:
@@ -62,11 +78,11 @@ class BoxClipper(XoceObject):
 
         conds = ds == ds
         for dim in self.box:
-            tmp_conds = (ds[dim] >= self.box[dim][0])
-            if self.box[dim][0] > self.box[dim][1]:
-                tmp_conds = tmp_conds | (ds[dim] <= self.box[dim][1])
+            tmp_conds = (ds[dim] >= bounds[0])
+            if bounds[0] > bounds[1]:
+                tmp_conds = tmp_conds | (ds[dim] <= bounds[1])
             conds  = conds & tmp_conds
-            conds  = conds & (ds[dim] <= self.box[dim][1])
+            conds  = conds & (ds[dim] <= bounds[1])
         
         if self.inverse:
             sliced = ds.where(~conds, drop=self.drop)

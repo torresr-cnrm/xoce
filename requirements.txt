@@ -15,4 +15,4 @@ h5py==3.6.0
 Cartopy==0.17.0
 geos==0.2.3
 proj==0.2.0
-shapely<=2.0
+shapely==1.8.0

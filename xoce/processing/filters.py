@@ -7,6 +7,7 @@ import numpy as np
 import xarray as xr
 
 import xoce.utils.dataset_util as xdsutil
+import xoce.api.experiment as xp
 
 from ..api.generic import XoceObject
 from ..utils.datetime_util import datetime_mean
@@ -76,6 +77,10 @@ class AverageFilter(XoceObject):
         filtered = xr.Dataset(coords=coords)
 
         for v in variables:
+            iscalc = isinstance(ds, xp.Experiment) and not ds._calc.is_calculable(v)
+            if v not in ds.variables and not iscalc :
+                continue
+
             if not (v in ds.coords) and self.dim in ds[v].dims:
                 conds  = (ds[v][self.dim] >= period[0])
                 conds  = conds & (ds[v][self.dim] <= period[1])

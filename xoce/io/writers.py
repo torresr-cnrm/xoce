@@ -149,7 +149,8 @@ class H5pyWriter(XoceObject):
 
         # store coordinates in attributes
         if list(array.coords):
-            var.attrs['coordinates'] = ' '.join(list(array.coords))
+            acoords = [c for c in array.coords if array.coords[c].shape]
+            var.attrs['coordinates'] = ' '.join(acoords)
 
         return var
 

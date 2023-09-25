@@ -4,12 +4,12 @@
 import xarray as xr
 import xoce.utils.dataset_util as xdsutil
 
-from ..api.generic import XoceObject
+from ..api.generic import XoceObject, set_attrs
 
 
 class BoxClipper(XoceObject):
     """
-    Box selection regarding some box on dataset coordinates. 
+    Box selection regarding some box on dataset coordinates.
     """
     _Parameters = {
         "box": {'type': dict,
@@ -27,6 +27,7 @@ class BoxClipper(XoceObject):
         self._set_default_parameters(**kargs)
 
 
+    @set_attrs
     def execute(self):
         ds = self.dataset
 
@@ -120,6 +121,7 @@ class Cutter(XoceObject):
         self._set_default_parameters(**kargs)
 
 
+    set_attrs
     def execute(self):
         ds = self.dataset
         dim = self.dim
@@ -167,7 +169,8 @@ class FieldSelector(XoceObject):
         # add default processing parameter
         self._set_default_parameters(**kargs)
 
-    
+
+    @set_attrs
     def execute(self):
         ds = self.dataset
 
@@ -217,6 +220,7 @@ class IndexSelector(XoceObject):
         self._set_default_parameters(**kargs)
 
     
+    @set_attrs
     def execute(self):
         ds = self.dataset
         dim = self.dim

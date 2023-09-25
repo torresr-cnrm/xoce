@@ -23,8 +23,9 @@ class Experiment:
         self.fmesh = None
 
         # core dataset properties
-        self._dims = dict()
+        self._dims   = dict()
         self._coords = dict()
+        self._attrs  = dict()
         self._chunks = None                       # dask chunks to split large datasets
 
         self._arrays = dict()                     # dict-like (could be xr.Dataset) obj

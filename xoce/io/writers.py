@@ -46,7 +46,7 @@ class H5pyWriter(XoceObject):
         "filename": {'type': str,
                  'default': None},
         "expname": {'type': str,
-                    'default': 'experiement'},
+                    'default': 'experiment'},
         "variables": {'type': list,
                     'default': list()},
         "reduce_mem": {'type': bool,

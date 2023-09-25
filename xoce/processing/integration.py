@@ -6,7 +6,7 @@ import xarray as xr
 
 import xoce.utils.dataset_util as xdsutil
 
-from ..api.generic import XoceObject
+from ..api.generic import XoceObject, set_attrs
 
 
 class Integral(XoceObject):
@@ -28,6 +28,7 @@ class Integral(XoceObject):
         self._set_default_parameters(**kargs)
 
 
+    @set_attrs
     def execute(self):
         ds = self.dataset
 

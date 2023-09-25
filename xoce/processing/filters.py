@@ -9,9 +9,8 @@ import xarray as xr
 import xoce.utils.dataset_util as xdsutil
 import xoce.api.experiment as xp
 
-from ..api.generic import XoceObject
+from ..api.generic import XoceObject, set_attrs
 from ..utils.datetime_util import datetime_mean
-
 
 
 class AverageFilter(XoceObject):
@@ -37,6 +36,7 @@ class AverageFilter(XoceObject):
         self._set_default_parameters(**kargs)
 
 
+    @set_attrs
     def execute(self):
         ds = self.dataset
         dimtype = type(ds[self.dim].data[0])
@@ -121,6 +121,7 @@ class ShapiroFilter(XoceObject):
         self._set_default_parameters(**kargs)
 
 
+    @set_attrs
     def execute(self):
         ds = self.dataset
 
@@ -321,6 +322,7 @@ class CoarseningFilter(XoceObject):
         self._set_default_parameters(**kargs)
 
 
+    @set_attrs
     def execute(self):
         ds = self.dataset
 

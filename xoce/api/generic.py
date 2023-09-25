@@ -1,6 +1,8 @@
 """
 """
 
+import xoce
+
 
 class NKeyError(Exception):
     """
@@ -61,3 +63,37 @@ class XoceObject:
                 self.set(param, kargs[param])
             else:
                 self.__dict__[param] = self._Parameters[param]['default']
+
+
+def set_attrs(func):
+    """
+    Processing decorator. This function add 'attrs' in processed xr.Dataset.
+    """
+
+    def processing(xobject):
+        processed = func(xobject) # processed is a xarray.Dataset instance
+
+        # keep input dataset or experiment attrs
+        processed.attrs.update(xobject.dataset.attrs)
+
+        # add processing attrs
+        classname = type(xobject).__name__
+
+        old_proc = processed.attrs.get('xoce_processing', '')
+        if old_proc:
+            new_attrs = {'xoce_processing': "{} + {}".format(old_proc, classname)}
+        else:
+            new_attrs = {'xoce_processing': classname}
+            
+        for p in xobject._Parameters:
+            name = '{}_{}'.format(classname, p)
+            attr = xobject.__dict__.get(p, '')
+            new_attrs[name] = str(attr)
+
+        new_attrs['xoce_version'] = xoce.__version__
+        processed.attrs.update(new_attrs)
+
+        return processed
+
+    return processing
+

@@ -1,6 +1,7 @@
 """
 """
 
+import numpy  as np
 import xarray as xr
 import xoce.utils.dataset_util as xdsutil
 
@@ -50,7 +51,7 @@ class BoxClipper(XoceObject):
                 if ds[dim].dtype == 'O':
                     dateinf = [int(ymd) for ymd in bounds[0].split('-')]
                     datesup = [int(ymd) for ymd in bounds[1].split('-')]
-                elif ds[self.dim].dtype == '<M8[ns]':
+                elif ds[dim].dtype == '<M8[ns]':
                     dateinf = [bounds[0]]
                     datesup = [bounds[1]]
                 bounds = (dimtype(*dateinf), dimtype(*datesup))
@@ -77,7 +78,7 @@ class BoxClipper(XoceObject):
         for co in coords:
             selected.coords[co] = coords[co]
 
-        conds = ds == ds
+        conds = True
         for dim in self.box:
             tmp_conds = (ds[dim] >= bounds[0])
             if bounds[0] > bounds[1]:

@@ -80,7 +80,6 @@ class BoxClipper(XoceObject):
 
         conds = True
         for dim in self.box:
-            bounds  = self.box[dim]
             tmp_conds = (ds[dim] >= bounds[0])
             
             if bounds[0] > bounds[1]:

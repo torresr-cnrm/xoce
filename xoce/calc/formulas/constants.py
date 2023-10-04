@@ -3,8 +3,9 @@
 
 class CONST:
     # earth constants
-    g = 9.81
+    g      = 9.81
     radius = 6371229
+    omega  = 7.292116e-05
 
     # thermodynamics
     p0   = 101325.0

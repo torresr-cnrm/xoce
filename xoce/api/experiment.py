@@ -66,6 +66,10 @@ class Experiment:
             else:
                 array = self.calculate(var)
 
+                for dim in self._unused_dims:
+                    if dim in array.dims:
+                        array = array.isel({dim:0})
+
         # interpolation if needed  
         if not self.interpolation:
             return array

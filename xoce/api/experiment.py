@@ -52,10 +52,6 @@ class Experiment:
                 else:
                     raise KeyError("'{}' not found in the experiment.".format(var))
             
-            for dim in self._unused_dims:
-                if dim in variable.dims:
-                    variable = variable.isel({dim:0})
-            
             self.add_variable(var, variable)
             array = self.arrays[var]
 
@@ -66,9 +62,10 @@ class Experiment:
             else:
                 array = self.calculate(var)
 
-                for dim in self._unused_dims:
-                    if dim in array.dims:
-                        array = array.isel({dim:0})
+        # remove unused dim
+        for dim in self._unused_dims:
+            if dim in array.dims:
+                array = array.isel({dim:0})
 
         # interpolation if needed  
         if not self.interpolation:

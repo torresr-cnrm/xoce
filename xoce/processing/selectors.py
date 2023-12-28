@@ -37,6 +37,9 @@ class BoxClipper(XoceObject):
                 raise Exception("BoxClipper error: '{}' ".format(dim) + 
                             "is not in dataset coordinates {}".format(list(ds.coords)))
 
+        # init dictionary of clip boundaries
+        dict_bnds = dict()
+
         # coordinates selection
         coords = {c: ds.coords[c] for c in ds.coords if c not in self.box}
         for dim in self.box:
@@ -55,6 +58,8 @@ class BoxClipper(XoceObject):
                     dateinf = [bounds[0]]
                     datesup = [bounds[1]]
                 bounds = (dimtype(*dateinf), dimtype(*datesup))
+
+            dict_bnds[dim] = bounds
 
             conds  = (ds[dim] >= bounds[0])
             conds  = conds & (ds[dim] <= bounds[1])
@@ -80,13 +85,13 @@ class BoxClipper(XoceObject):
 
         conds = True
         for dim in self.box:
-            tmp_conds = (ds[dim] >= bounds[0])
+            tmp_conds = (ds[dim] >= dict_bnds[dim][0])
             
-            if bounds[0] > bounds[1]:
-                tmp_conds = tmp_conds | (ds[dim] <= bounds[1])
+            if dict_bnds[dim][0] > dict_bnds[dim][1]:
+                tmp_conds = tmp_conds | (ds[dim] <= dict_bnds[dim][1])
 
             conds  = conds & tmp_conds
-            conds  = conds & (ds[dim] <= bounds[1])
+            conds  = conds & (ds[dim] <= dict_bnds[dim][1])
         
         if self.inverse:
             sliced = ds.where(~conds, drop=self.drop)

@@ -16,3 +16,4 @@ Cartopy==0.17.0
 geos==0.2.3
 proj==0.2.0
 shapely==1.8.0
+pandas==1.5.3

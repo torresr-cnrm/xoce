@@ -2,6 +2,7 @@
 Define functions and methods for plotting datas. 
 """
 
+from operator import add
 import numpy as np
 import numpy.ma as ma
 import xarray as xr
@@ -262,7 +263,8 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     bcg = kargs.get('bgc', (0.75, 0.75, 0.75))
     axes_labels = kargs.get('axes_labels', ['',''])
     cbar_labels = kargs.get('cbar_labels', {})
-    colorbar = kargs.get('colorbar', None)
+    colorbar  = kargs.get('colorbar', None)
+    add_cbar  = kargs.get('add_cbar', True)
     orca_grid = kargs.get('orca_grid', True)
     glines = kargs.get('gridlines', True)
 
@@ -307,6 +309,10 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     if orca_grid:
         fill_orca_grid(lons[:, :], lats[:, :], values[:, :], xmap, qmesh)
 
+    if not add_cbar:
+        plt.close()
+        return
+        
     # add an adaptative size color bar
     labs = [ax.get_label() for ax in xmap.figure.axes]
     ilab = 0

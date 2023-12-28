@@ -40,10 +40,15 @@ def datetime_to_cftime(arr:np.ndarray):
         for i in range(arr.shape[0]):
             cfarr[i] = datetime_to_cftime(arr[i])
     else:
-        for i, dt in enumerate(arr):
-            dtdate, dttime = str(dt).split('T')
+        if len(arr.shape) == 0:
+            dtdate, dttime = str(arr).split('T')
             list_cft = dtdate.split('-') + dttime.split(':')
-            cfarr[i] = cftime.DatetimeNoLeap(*[int(float(e)) for e in list_cft])
+            cfarr    = cftime.DatetimeNoLeap(*[int(float(e)) for e in list_cft])
+        else:
+            for i, dt in enumerate(arr):
+                dtdate, dttime = str(dt).split('T')
+                list_cft = dtdate.split('-') + dttime.split(':')
+                cfarr[i] = cftime.DatetimeNoLeap(*[int(float(e)) for e in list_cft])
 
         return cfarr
 

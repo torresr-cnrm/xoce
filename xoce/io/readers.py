@@ -95,9 +95,12 @@ class H5pyReader(XoceObject):
                             cdims = list(grp[cname].attrs['DIMENSION_LABELS'])
                             cdims = [str(d) for d in cdims]
                         else:
-                            cdims = list()
+                            cdims = [cname]
                             
                         coords[cname] = xr.DataArray(cdats, name=cname, dims=cdims)
+
+                        if cname not in ds.coords:
+                            ds.coords[cname] = coords[cname]
 
                 else:
                     coords = None

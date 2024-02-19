@@ -1,9 +1,11 @@
 """
 """
 
+import imp
 import numpy as np
 import xarray as xr
 
+from xoce.api                  import _DIM_COORDINATES
 from xoce.processing.selectors import BoxClipper
 
 
@@ -45,7 +47,7 @@ def concatenate_arrays(larrays, dim, chunks=None):
     arr = xr.concat(larrays, dim=dim)
     
     if chunks is None:
-        arr = arr.chunk({})
+        arr = arr.chunk({}).load()
     else:
         arr = arr.chunk(chunks)
 
@@ -57,7 +59,7 @@ def array_diff(da, dim='time', method='forward'):
     Make a diff operation under a DataArray object along one dimension.
     The method argument is set to 'forward' differentiation.
     """
-    if method not in ['forward', 'backward']:
+    if method not in ['forward', 'backward', 'centered']:
         raise Exception("Unknown method '{}'".format(method))
     
     arr = xr.full_like(da, np.nan)
@@ -82,10 +84,34 @@ def array_diff(da, dim='time', method='forward'):
         fst.coords[dim] = [da.coords[dim][0]]
         arr.data = concatenate_arrays([fst, dif], dim=dim, chunks=da.chunks).data
 
+    elif method == 'centered':
+        dab = da.isel({dim: slice(0,-1,1)})
+        daa = da.isel({dim: slice(1,None,1)})
+
+        fst = da.isel({dim: [0]})
+        lst = da.isel({dim: [-1]})
+
+        co  = _DIM_COORDINATES.get(dim, dim)
+
+        if co == 'longitude':
+            fst.coords[co] = (dim, fst.coords[co].load().data + 360.)
+            lst.coords[co] = (dim, lst.coords[co].load().data - 360.)
+        else:
+            fst.data *= 0.
+            lst.data *= 0.
+
+            fst.coords[co] = (2*daa.coords[co][-1] - daa.coords[co][-2])
+            lst.coords[co] = (2*dab.coords[co][0]  - dab.coords[co][1] )
+
+        dab = concatenate_arrays([lst, dab], dim=dim, chunks=da.chunks)
+        daa = concatenate_arrays([daa, fst], dim=dim, chunks=da.chunks)
+
+        arr.data = (daa - dab).data
+
     return arr
 
 
-def array_bnds(da, dim=None):
+def array_bnds(da, dim=None, extrapolate=False):
     """
     Compute DataArray boundaries.
     """
@@ -127,7 +153,15 @@ def array_bnds(da, dim=None):
                 daa.coords[c] = dab.coords[c]
 
         dbnd2 = concatenate_arrays([0.5*(dab+daa), lst], dim=d, chunks=da.chunks)
+        if len(dbnd2.shape) != len(dbnds.shape):
+            dbnd2 = dbnd2.expand_dims({'nbounds': 1}, axis=-1)
+
         dbnds = concatenate_arrays([dbnds, dbnd2], dim='nbounds', chunks=da.chunks)
+
+        # extrapolate first and last cell boundaries
+        if extrapolate:
+            dbnds[0,0]  -= (dbnds[0,1]  - dbnds[0,0])
+            dbnds[-1,1] += (dbnds[-1,1] - dbnds[-1,0])
 
     arr.data = dbnds.data
 

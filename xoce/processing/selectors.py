@@ -164,7 +164,7 @@ class Cutter(XoceObject):
 
 class FieldSelector(XoceObject):
     """
-    Select variables to return a reduced dataset 
+    Select variables to return a reduced dataset. 
     """
     _Parameters = {
         "variables": {'type': list,

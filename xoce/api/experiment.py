@@ -34,7 +34,8 @@ class Experiment:
 
         # loading and array options
         self.interpolation = interpolation
-        self._unused_dims = list()
+        self._unused_dims  = list()
+        self._dtype        = None
 
 
     def __getitem__(self, var):
@@ -79,6 +80,9 @@ class Experiment:
                         array = array.interp(**{d: self.coords[c]}, method=method,
                                             kwargs={"fill_value": "extrapolate"})
 
+        if self.dtype and array.dtype != self.dtype and var not in self.coords:
+            array = array.astype(self.dtype)
+
         return array
 
 
@@ -116,6 +120,18 @@ class Experiment:
         self._mesh = mesh
         self.fmesh = fmesh
 
+
+    @property
+    def dtype(self):
+        return self._dtype
+    
+    @dtype.setter
+    def dtype(self, value):
+        try:
+            np.dtype(value)
+        except TypeError as e:
+            raise TypeError("data type '{}' not understood.".format(value))
+        self._dtype = value
 
     @property
     def dims(self):

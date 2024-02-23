@@ -77,6 +77,7 @@ class hpgi:
         hpg_0 = array_diff(poh_0, dim='x', method='centered') / e1t
 
         hpg   = hpg_0.expand_dims({'depth': rho['depth']}, axis=0)
+        hpg.coords['depth'] = rho['depth']
                 
         # ..then compute the pressure gradient above the cell center
         dbnds = array_bnds(rho['depth'], dim='depth')
@@ -92,7 +93,7 @@ class hpgi:
             poh    = poh + CONST.g * rho.isel({'depth': k}) * dz_up[k]
             hpg[k] = hpg[k-1] + array_diff(poh, dim='x', method='centered') / e1t 
 
-        return hpg
+        return hpg.transpose(*rho.dims)
 
 
 class hpgj:
@@ -107,6 +108,7 @@ class hpgj:
         hpg_0 = array_diff(poh_0, dim='y', method='centered') / e2t
 
         hpg   = hpg_0.expand_dims({'depth': rho['depth']}, axis=0)
+        hpg.coords['depth'] = rho['depth']
                 
         # ..then compute the pressure gradient above the cell center
         dbnds = array_bnds(rho['depth'], dim='depth')
@@ -122,7 +124,7 @@ class hpgj:
             poh    = poh + CONST.g * rho.isel({'depth': k}) * dz_up[k]
             hpg[k] = hpg[k-1] + array_diff(poh, dim='y', method='centered') / e2t 
 
-        return hpg
+        return hpg.transpose(*rho.dims)
 
 
 class hpg:
@@ -131,9 +133,44 @@ class hpg:
     units         = 'Pa m-1'
     grid          = 'T'
 
-    def calculate(rho, e1t, e2t, e3t):
+    def calculate(rho, e1t, e2t):
         grdx = hpgi.calculate(rho, e1t)
         grdy = hpgj.calculate(rho, e2t)
+
+        return (grdx, grdy)
+
+
+class spgi:
+    long_name     = 'Surface pressure gradient in the i-direction'
+    standard_name = 'spgi'
+    units         = 'Pa m-1'
+    grid          = 'W'
+
+    def calculate(pso, e1t):
+
+        return array_diff(pso, dim='x', method='centered') / e1t
+
+
+class spgj:
+    long_name     = 'Surface pressure gradient in the j-direction'
+    standard_name = 'spgj'
+    units         = 'Pa m-1'
+    grid          = 'W'
+
+    def calculate(pso, e2t):
+
+        return array_diff(pso, dim='y', method='centered') / e2t
+
+
+class spg:
+    long_name     = 'Surface pressure gradient'
+    standard_name = 'spg'
+    units         = 'Pa m-1'
+    grid          = 'W'
+
+    def calculate(rho, e1t, e2t):
+        grdx = spgi.calculate(rho, e1t)
+        grdy = spgj.calculate(rho, e2t)
 
         return (grdx, grdy)
 

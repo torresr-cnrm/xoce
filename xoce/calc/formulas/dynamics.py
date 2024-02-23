@@ -74,7 +74,7 @@ class hpgi:
     def calculate(rho, e1t):
         # init a 3D array with the first layer hydrostatic pressure gradient
         poh_0 = CONST.g * rho.isel({'depth': 0}) * rho['depth'][0]
-        hpg_0 = array_diff(poh_0, dim='x', method='centered') / e1t
+        hpg_0 = array_diff(poh_0, dim='x', method='centered') / (2*e1t)
 
         hpg   = hpg_0.expand_dims({'depth': rho['depth']}, axis=0)
         hpg.coords['depth'] = rho['depth']
@@ -91,7 +91,7 @@ class hpgi:
         for k in range(1, len(rho['depth']), 1):
             poh    = CONST.g * rho.isel({'depth': k-1}) * dz_dw[k-1]
             poh    = poh + CONST.g * rho.isel({'depth': k}) * dz_up[k]
-            hpg[k] = hpg[k-1] + array_diff(poh, dim='x', method='centered') / e1t 
+            hpg[k] = hpg[k-1] + array_diff(poh, dim='x', method='centered') / (2*e1t) 
 
         return hpg.transpose(*rho.dims)
 
@@ -105,7 +105,7 @@ class hpgj:
     def calculate(rho, e2t):
         # init a 3D array with the first layer hydrostatic pressure gradient
         poh_0 = CONST.g * rho.isel({'depth': 0}) * rho['depth'][0]
-        hpg_0 = array_diff(poh_0, dim='y', method='centered') / e2t
+        hpg_0 = array_diff(poh_0, dim='y', method='centered') / (2*e2t)
 
         hpg   = hpg_0.expand_dims({'depth': rho['depth']}, axis=0)
         hpg.coords['depth'] = rho['depth']
@@ -122,7 +122,7 @@ class hpgj:
         for k in range(1, len(rho['depth']), 1):
             poh    = CONST.g * rho.isel({'depth': k-1}) * dz_dw[k-1]
             poh    = poh + CONST.g * rho.isel({'depth': k}) * dz_up[k]
-            hpg[k] = hpg[k-1] + array_diff(poh, dim='y', method='centered') / e2t 
+            hpg[k] = hpg[k-1] + array_diff(poh, dim='y', method='centered') / (2*e2t) 
 
         return hpg.transpose(*rho.dims)
 
@@ -148,7 +148,7 @@ class spgi:
 
     def calculate(pso, e1t):
 
-        return array_diff(pso, dim='x', method='centered') / e1t
+        return array_diff(pso, dim='x', method='centered') / (2*e1t)
 
 
 class spgj:
@@ -159,7 +159,7 @@ class spgj:
 
     def calculate(pso, e2t):
 
-        return array_diff(pso, dim='y', method='centered') / e2t
+        return array_diff(pso, dim='y', method='centered') / (2*e2t)
 
 
 class spg:

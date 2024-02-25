@@ -64,15 +64,42 @@ class hpgi:
     units         = 'Pa m-1'
     grid          = 'T'
 
-    def calculate(rho, e1t, e3t):
+    def calculate(rho, e1t, e3t, zos):
         rdz_up  = (rho*e3t).isel({'depth': range(0, len(rho['depth'])-1)})
         grd_up  = array_diff(rdz_up, dim='x', method='centered') / (2*e1t)
         grd_up.coords['depth'] = rho['depth'][1:]
 
         hpg_up  = xr.concat( [0.*rho.isel({'depth':0}), grd_up.cumsum('depth')], 
                                                                             dim='depth')
-        grd = array_diff(rho*e3t/2, dim='x', method='centered') / (2*e1t)
-        hpg = CONST.g * (hpg_up + grd)
+
+        # compute d(rho * e3t/2)/dy
+        depthb = e3t/2 - array_diff(zos, dim='x', method='forward')
+        deptha = e3t/2 + array_diff(zos, dim='x', method='backward')
+
+        dab = (rho * depthb).isel({'x': slice(0,-1,1)})
+        daa = (rho * deptha).isel({'x': slice(1,None,1)})
+
+        fst = (rho * rho['depth']).isel({'x': [0]})
+        lst = (rho * rho['depth']).isel({'x': [-1]})
+
+        co  = _DIM_COORDINATES.get('x', 'x')
+
+        fst.data *= 0.
+        lst.data *= 0.
+
+        fst.coords[co] = (2*daa.coords[co][-1] - daa.coords[co][-2])
+        lst.coords[co] = (2*dab.coords[co][0]  - dab.coords[co][1] )
+
+        dab = dab.transpose(*rho.dims)
+        daa = daa.transpose(*rho.dims)
+        lst = lst.transpose(*rho.dims)
+        fst = fst.transpose(*rho.dims)
+
+        dab = concatenate_arrays([lst, dab], dim='x', chunks=rho.chunks)
+        daa = concatenate_arrays([daa, fst], dim='x', chunks=rho.chunks)
+
+        # compute the hydrostatic pressure gradient
+        hpg = CONST.g * (hpg_up + (daa - dab) / (2*e1t))
 
         return hpg.transpose(*rho.dims)
 
@@ -120,7 +147,7 @@ class hpgj:
         # compute the hydrostatic pressure gradient
         hpg = CONST.g * (hpg_up + (daa - dab) / (2*e2t))
 
-        return hpg
+        return hpg.transpose(*rho.dims)
 
 
 class hpg:

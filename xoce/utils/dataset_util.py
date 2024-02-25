@@ -57,7 +57,7 @@ def concatenate_arrays(larrays, dim, chunks=None):
 def array_diff(da, dim='time', method='forward'):
     """
     Make a diff operation under a DataArray object along one dimension.
-    The method argument is set to 'forward' differentiation.
+    The method argument is set to 'forward' differentiation by default.
     """
     if method not in ['forward', 'backward', 'centered']:
         raise Exception("Unknown method '{}'".format(method))

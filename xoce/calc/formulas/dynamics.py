@@ -2,11 +2,12 @@
 Geophysical fluid dynamics computation.
 """
 
+import numpy  as np
 import xarray as xr
 
+from xoce.api                     import _DIM_COORDINATES
 from xoce.calc.formulas.constants import CONST
-from xoce.calc.formulas.thermo    import rho
-from xoce.utils.dataset_util      import array_bnds, array_diff
+from xoce.utils.dataset_util      import array_bnds, array_diff, concatenate_arrays
 
 
 class uo:
@@ -35,24 +36,16 @@ class poh:
     units         = 'Pa'
     grid          = 'T'
 
-    def calculate(rho):
-        # init a 3D array with the first layer hydrostatic pressure
-        poh_0 = CONST.g * rho * rho['depth'][0]
-        poh   = xr.DataArray(name='poh', data=poh_0.data, coords=rho.coords, dims=rho.dims)
-        
-        dbnds = array_bnds(rho['depth'], dim='depth')
-        
-        # then compute the sea mass pressure above the cell
-        dz_up      = xr.full_like(rho['depth'], 0.)
-        rho_up     = rho.isel({'depth': range(0, len(rho['depth'])-1)})
-        dz_up[:-1] = (dbnds[:, 1] - rho['depth'])[:-1].data
-        poh_up     = CONST.g * (rho_up * dz_up).cumsum('depth')
-        poh_up['depth'] = rho['depth'][1:]
+    def calculate(rho, e3t):
+        rdz_up  = (rho*e3t).isel({'depth': range(0, len(rho['depth'])-1)})
+        rdz_up.coords['depth'] = rho['depth'][1:]
 
-        poh_up     = xr.concat( [0.*rho.isel({'depth':0}), poh_up], dim='depth')
+        poh_up  = xr.concat( [0.*rho.isel({'depth':0}), rdz_up.cumsum('depth')], 
+                                                                            dim='depth')
 
-        # finally add the missing cell sea water mass
-        return poh + poh_up + CONST.g * (rho['depth'] - dbnds[:,0]) * rho
+        poh = CONST.g * (poh_up + rho*e3t/2)
+
+        return poh.transpose(*rho.dims)
 
 
 class po:
@@ -71,27 +64,15 @@ class hpgi:
     units         = 'Pa m-1'
     grid          = 'T'
 
-    def calculate(rho, e1t):
-        # init a 3D array with the first layer hydrostatic pressure gradient
-        poh_0 = CONST.g * rho.isel({'depth': 0}) * rho['depth'][0]
-        hpg_0 = array_diff(poh_0, dim='x', method='centered') / (2*e1t)
+    def calculate(rho, e1t, e3t):
+        rdz_up  = (rho*e3t).isel({'depth': range(0, len(rho['depth'])-1)})
+        grd_up  = array_diff(rdz_up, dim='x', method='centered') / (2*e1t)
+        grd_up.coords['depth'] = rho['depth'][1:]
 
-        hpg   = hpg_0.expand_dims({'depth': rho['depth']}, axis=0)
-        hpg.coords['depth'] = rho['depth']
-                
-        # ..then compute the pressure gradient above the cell center
-        dbnds = array_bnds(rho['depth'], dim='depth')
-
-        dz_dw      = xr.full_like(rho['depth'], 0.)
-        dz_up      = xr.full_like(rho['depth'], 0.)
-
-        dz_dw[:-1] = (dbnds[:, 1] - rho['depth'])[:-1].data
-        dz_up[:-1] = (rho['depth'] - dbnds[:, 0])[:-1].data
-
-        for k in range(1, len(rho['depth']), 1):
-            poh    = CONST.g * rho.isel({'depth': k-1}) * dz_dw[k-1]
-            poh    = poh + CONST.g * rho.isel({'depth': k}) * dz_up[k]
-            hpg[k] = hpg[k-1] + array_diff(poh, dim='x', method='centered') / (2*e1t) 
+        hpg_up  = xr.concat( [0.*rho.isel({'depth':0}), grd_up.cumsum('depth')], 
+                                                                            dim='depth')
+        grd = array_diff(rho*e3t/2, dim='x', method='centered') / (2*e1t)
+        hpg = CONST.g * (hpg_up + grd)
 
         return hpg.transpose(*rho.dims)
 
@@ -102,29 +83,44 @@ class hpgj:
     units         = 'Pa m-1'
     grid          = 'T'
 
-    def calculate(rho, e2t):
-        # init a 3D array with the first layer hydrostatic pressure gradient
-        poh_0 = CONST.g * rho.isel({'depth': 0}) * rho['depth'][0]
-        hpg_0 = array_diff(poh_0, dim='y', method='centered') / (2*e2t)
+    def calculate(rho, e2t, e3t, zos):
+        rdz_up  = (rho*e3t).isel({'depth': range(0, len(rho['depth'])-1)})
+        grd_up  = array_diff(rdz_up, dim='y', method='centered') / (2*e2t)
+        grd_up.coords['depth'] = rho['depth'][1:]
 
-        hpg   = hpg_0.expand_dims({'depth': rho['depth']}, axis=0)
-        hpg.coords['depth'] = rho['depth']
-                
-        # ..then compute the pressure gradient above the cell center
-        dbnds = array_bnds(rho['depth'], dim='depth')
+        hpg_up  = xr.concat( [0.*rho.isel({'depth':0}), grd_up.cumsum('depth')], 
+                                                                            dim='depth')
 
-        dz_dw      = xr.full_like(rho['depth'], 0.)
-        dz_up      = xr.full_like(rho['depth'], 0.)
+        # compute d(rho * e3t/2)/dy
+        depthb = e3t/2 - array_diff(zos, dim='y', method='forward')
+        deptha = e3t/2 + array_diff(zos, dim='y', method='backward')
 
-        dz_dw[:-1] = (dbnds[:, 1] - rho['depth'])[:-1].data
-        dz_up[:-1] = (rho['depth'] - dbnds[:, 0])[:-1].data
+        dab = (rho * depthb).isel({'y': slice(0,-1,1)})
+        daa = (rho * deptha).isel({'y': slice(1,None,1)})
 
-        for k in range(1, len(rho['depth']), 1):
-            poh    = CONST.g * rho.isel({'depth': k-1}) * dz_dw[k-1]
-            poh    = poh + CONST.g * rho.isel({'depth': k}) * dz_up[k]
-            hpg[k] = hpg[k-1] + array_diff(poh, dim='y', method='centered') / (2*e2t) 
+        fst = (rho * rho['depth']).isel({'y': [0]})
+        lst = (rho * rho['depth']).isel({'y': [-1]})
 
-        return hpg.transpose(*rho.dims)
+        co  = _DIM_COORDINATES.get('y', 'y')
+
+        fst.data *= 0.
+        lst.data *= 0.
+
+        fst.coords[co] = (2*daa.coords[co][-1] - daa.coords[co][-2])
+        lst.coords[co] = (2*dab.coords[co][0]  - dab.coords[co][1] )
+
+        dab = dab.transpose(*rho.dims)
+        daa = daa.transpose(*rho.dims)
+        lst = lst.transpose(*rho.dims)
+        fst = fst.transpose(*rho.dims)
+
+        dab = concatenate_arrays([lst, dab], dim='y', chunks=rho.chunks)
+        daa = concatenate_arrays([daa, fst], dim='y', chunks=rho.chunks)
+
+        # compute the hydrostatic pressure gradient
+        hpg = CONST.g * (hpg_up + (daa - dab) / (2*e2t))
+
+        return hpg
 
 
 class hpg:

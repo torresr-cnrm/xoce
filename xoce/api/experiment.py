@@ -41,20 +41,17 @@ class Experiment:
     def __getitem__(self, var):
         if var in self.variables:
             if var in self.arrays:
-                variable = self.arrays[var]
+                array = self.arrays[var]
             elif var in self._mesh.variables:
-                variable = self._mesh[var]
+                array = self._mesh[var]
             elif var in self.coords:
-                variable = self.coords[var]
+                array = self.coords[var]
             else:
                 lres = self.load_variable(var, chunks=self._chunks)
                 if lres is not None:
-                    variable = self.arrays[var]
+                    array = self.arrays[var]
                 else:
                     raise KeyError("'{}' not found in the experiment.".format(var))
-            
-            self.add_variable(var, variable)
-            array = self.arrays[var]
 
         else:
             if not self._calc.is_calculable(var):
@@ -80,6 +77,9 @@ class Experiment:
                         array = array.interp(**{d: self.coords[c]}, method=method,
                                             kwargs={"fill_value": "extrapolate"})
 
+        self.add_variable(var, array)
+        array = self.arrays[var]
+        
         if self.dtype and array.dtype != self.dtype and var not in self.coords:
             array = array.astype(self.dtype)
 

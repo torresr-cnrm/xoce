@@ -29,6 +29,16 @@ class vo:
         raise Exception('Undefined')
 
 
+class pso:
+    long_name     = 'Surface pressure at the reference geopotential surface'
+    standard_name = 'sea_water_pressure_at_the_reference_geopotential_surface'
+    units         = 'Pa'
+    grid          = 'W'
+
+    def calculate(zos, rau0=CONST.rho0, p_ref=0.):
+        return p_ref + CONST.g * rau0 * zos
+
+
 class poh:
     long_name     = 'Hydrostatic pressure under the geopotential surface'
     standard_name = 'sea_water_hydrostatic_pressure_under_geopotential_surface'

@@ -48,30 +48,13 @@ class AverageFilter(XoceObject):
         period = self.period
         if period is None:
             period = (ds[self.dim][0], ds[self.dim][-1])
-        
-        elif self.dim in ['time', 't']: 
-            # Converting to unregular datetime
-            if ds[self.dim].dtype == 'O':
-                dateinf = [int(ymd) for ymd in period[0].split('-')]
-                datesup = [int(ymd) for ymd in period[1].split('-')]
-            elif ds[self.dim].dtype == '<M8[ns]':
-                dateinf = [period[0]]
-                datesup = [period[1]]
-            period = (dimtype(*dateinf), dimtype(*datesup))
 
         coords = ds.coords
 
         if not self.inverse:
             coords = {c: ds.coords[c] for c in ds.coords if c != self.dim}
-            conds  = (ds[self.dim] >= period[0])
-            conds  = conds & (ds[self.dim] <= period[1])
-            sliced = ds[self.dim].where(conds)
-
-            # special case for datetime data
-            if cftime.datetime in dimtype.__bases__:
-                newdim = xr.IndexVariable(self.dim, [datetime_mean(sliced, self.dim)])
-            else:
-                newdim = xr.IndexVariable(self.dim, [sliced.mean(dim=self.dim).data])
+            cmean  = ds[self.dim].sel({self.dim: slice(*period)}).mean(dim=self.dim)
+            newdim = xr.IndexVariable(self.dim, [cmean])
             coords.update({self.dim: newdim})
 
         filtered = xr.Dataset(coords=coords)
@@ -82,19 +65,19 @@ class AverageFilter(XoceObject):
                 continue
 
             if not (v in ds.coords) and self.dim in ds[v].dims:
-                conds  = (ds[v][self.dim] >= period[0])
-                conds  = conds & (ds[v][self.dim] <= period[1])
-                sliced = ds[v].where(conds)
-                vmean  = sliced.mean(dim=self.dim)
+                vmean  = ds[v].sel({self.dim: slice(*period)}).mean(dim=self.dim)
 
                 if self.inverse:
                     narray = ds[v] - vmean.load()
                 else:
                     narray = vmean.expand_dims({self.dim:filtered[self.dim]})
                 
-                # add filtered variable
-                narray.name = v
-                xdsutil.assign_variable(filtered, narray)
+            elif not self.dim in ds[v].dims:
+                narray = ds[v]
+
+            # add filtered variable
+            narray.name = v
+            xdsutil.assign_variable(filtered, narray)
 
         return filtered
 

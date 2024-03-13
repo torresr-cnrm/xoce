@@ -39,7 +39,6 @@ class AverageFilter(XoceObject):
     @set_attrs
     def execute(self):
         ds = self.dataset
-        dimtype = type(ds[self.dim].data[0])
 
         variables = self.variables
         if variables is None:

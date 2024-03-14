@@ -2,7 +2,6 @@
 Define functions and methods for plotting datas. 
 """
 
-from operator import add
 import numpy as np
 import numpy.ma as ma
 import xarray as xr

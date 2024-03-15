@@ -94,8 +94,8 @@ def array_diff(da, dim='time', method='forward'):
         co  = _DIM_COORDINATES.get(dim, dim)
 
         if co == 'longitude':
-            fst.coords[co] = (fst.dims, fst.coords[co].load().data + 360.)
-            lst.coords[co] = (fst.dims, lst.coords[co].load().data - 360.)
+            fst.coords[co] = (fst.coords[co].dims, fst.coords[co].load().data + 360.)
+            lst.coords[co] = (fst.coords[co].dims, lst.coords[co].load().data - 360.)
         else:
             fst.data *= 0.
             lst.data *= 0.

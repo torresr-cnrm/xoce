@@ -202,7 +202,7 @@ def split_dataset(dataset, dim, bounds, drop=False):
 
 def get_dim_axis(dataset, dim_names, skip_notfound=False):
     """
-    Return the axis order af a `dataset` (could be both xr.Dataset or xr.DataArray)
+    Return the axis order of a `dataset` (could be both xr.Dataset or xr.DataArray)
     corresponding to the desired dimensions in dim_names. 
     The option skip_notfound can be turn on to avoid raising error if dimension is 
     only in dim_names list.
@@ -233,7 +233,7 @@ def broadcast_like(model, da:xr.DataArray):
     res.attrs = da.attrs
     
     rshape   = [1] * len(res.shape)
-    zaxis, _ = get_dim_axis(res, ['depth'])[0]
+    zaxis    = get_dim_axis(res, ['depth'])[0][0]
     rshape[zaxis] = res.shape[zaxis]
     
     for d in res.dims:

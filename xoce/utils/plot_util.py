@@ -67,7 +67,7 @@ def switch_array(datas, isep, axis=0):
 
 
 def get_variable_data(datas, var, mesh=None, filtering=True, lamtol=100, 
-                      make_grid=False):
+                      make_grid=False, duplicate_at_origin=False):
     """
     Get variable datas and re arange fields if needed
     (ex: if discontinuity is found in longitudinal data.)
@@ -166,6 +166,14 @@ def get_variable_data(datas, var, mesh=None, filtering=True, lamtol=100,
 
         lons = np.insert(lons, 0, lons[0, :], axis=0)
         lats = np.insert(lats, 0, 2*lats[0, :]-lats[1, :], axis=0)
+    
+    elif duplicate_at_origin:
+        lons = np.concatenate( (np.ones(293).reshape((293, 1))*-180., lons), axis=1)
+        lons = np.concatenate( (lons, np.ones(293).reshape((293, 1))*180.), axis=1)
+        lats = np.concatenate( (lats[:,   0].reshape((293, 1)), lats), axis=1)
+        lats = np.concatenate( (lats, lats[:,  -1].reshape((293, 1))), axis=1)
+        vals = np.concatenate( (vals[:,   0].reshape((293, 1)), vals), axis=1)
+        vals = np.concatenate( (vals, vals[:,  -1].reshape((293, 1))), axis=1)
     
     return lons, lats, vals
 
@@ -343,11 +351,15 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
         if 'seq' in colorbar.formatter.__dict__:
             seq = colorbar.formatter.seq
 
-        colorbar.update_bruteforce(colorbar.mappable)
+        formatter = colorbar.formatter
+
+        colorbar.update_normal(colorbar.mappable)
         if list(locs):
             colorbar.set_ticks(locs)
         if list(seq):
             colorbar.set_ticklabels(seq)
+
+        colorbar.formatter = formatter
 
         if colorbar.__dict__.get('position', '') == 'top':
             xcb.xaxis.tick_top()

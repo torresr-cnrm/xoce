@@ -10,3 +10,4 @@ class CONST:
     # thermodynamics
     p0   = 101325.0
     rho0 = 1026.0
+    Cp   = 3991.86795711963

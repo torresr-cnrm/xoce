@@ -1,7 +1,6 @@
 """
 """
 
-import cftime
 import dask
 import numpy as np
 import xarray as xr
@@ -53,7 +52,11 @@ class AverageFilter(XoceObject):
         if not self.inverse:
             coords = {c: ds.coords[c] for c in ds.coords if c != self.dim}
             cmean  = ds[self.dim].sel({self.dim: slice(*period)}).mean(dim=self.dim)
-            newdim = xr.IndexVariable(self.dim, [cmean])
+            if cmean.dtype.type == np.datetime64:
+                newdim = xr.IndexVariable(self.dim, [cmean.data])
+            else:
+                newdim = xr.IndexVariable(self.dim, [cmean])
+
             coords.update({self.dim: newdim})
 
         filtered = xr.Dataset(coords=coords)

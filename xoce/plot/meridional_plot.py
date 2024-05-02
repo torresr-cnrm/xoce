@@ -40,6 +40,8 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
         norm = colorbar.norm
         vbounds = (colorbar.vmin, colorbar.vmax)
         clevels = len(colorbar._values) - 1
+    else:
+        clevels = None
 
     ax.set_title(title)
     ax.set_facecolor(bcg)
@@ -52,9 +54,14 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
 
     # Y axis - depth
     ax.set_yscale(yscale)
-    ax.set_ylim((10, 6000))
-    ax.set_yticks([20, 100, 300, 500, 1000, 3000])
-    ax.set_yticklabels([20, 100, 300, 500, 1000, 3000])
+    if yscale == 'log':
+        ax.set_ylim((10, 6000))
+        ax.set_yticks([20, 100, 300, 500, 1000, 3000])
+        ax.set_yticklabels([20, 100, 300, 500, 1000, 3000])
+    elif yscale == 'linear':
+        ax.set_ylim((10, 5500))
+        ax.set_yticks([10, 250, 500, 1000, 1500, 2000, 3000, 4000])
+    
     ax.invert_yaxis()
     ax.set_ylabel(axes_labels[1])
 

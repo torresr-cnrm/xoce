@@ -35,7 +35,7 @@ class Experiment:
         # loading and array options
         self.interpolation = interpolation
         self._unused_dims  = list()
-        self._dtype        = None
+        self._dtype        = None                 # numerical data type (eg: float)
 
 
     def __getitem__(self, var):
@@ -80,8 +80,12 @@ class Experiment:
         self.add_variable(var, array)
         array = self.arrays[var]
         
-        if self.dtype and array.dtype != self.dtype and var not in self.coords:
-            array = array.astype(self.dtype)
+        if self.dtype and array.dtype != self.dtype:
+            print(array.name, self.dtype)
+            try:
+                array = array.astype(self.dtype)
+            except TypeError:
+                pass
 
         return array
 
@@ -131,6 +135,7 @@ class Experiment:
             np.dtype(value)
         except TypeError as e:
             raise TypeError("data type '{}' not understood.".format(value))
+
         self._dtype = value
 
     @property

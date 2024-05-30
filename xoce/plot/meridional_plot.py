@@ -97,8 +97,22 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
     
         colorbar.ax  = cax
         colorbar.cax = cax
+        print("here")
+        locs, seq = list(), list()
+        if 'locs' in colorbar.locator.__dict__:
+            locs = colorbar.locator.locs
+        if 'seq' in colorbar.formatter.__dict__:
+            seq = colorbar.formatter.seq
+        
+        formatter = colorbar.formatter
+        colorbar.update_normal(colorbar.mappable)
 
-        colorbar.update_bruteforce(colorbar.mappable)
+        if list(locs):
+            colorbar.set_ticks(locs)
+        if list(seq):
+            colorbar.set_ticklabels(seq)
+
+        colorbar.formatter = formatter
 
     elif add_cbar:
         if cbar_labels:

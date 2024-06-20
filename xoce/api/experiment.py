@@ -2,6 +2,7 @@
 """
 
 
+from codecs import decode
 import copy
 import os
 import numpy as np
@@ -34,8 +35,9 @@ class Experiment:
 
         # loading and array options
         self.interpolation = interpolation
-        self._unused_dims  = list()
         self._dtype        = None                 # numerical data type (eg: float)
+        self._decode_times = None                 # decode dim 'times' when loading files
+        self._unused_dims  = list()
 
 
     def __getitem__(self, var):
@@ -47,7 +49,8 @@ class Experiment:
             elif var in self.coords:
                 array = self.coords[var]
             else:
-                lres = self.load_variable(var, chunks=self._chunks)
+                lres = self.load_variable(var, chunks=self._chunks, 
+                                               decode_times=self._decode_times)
                 if lres is not None:
                     array = self.arrays[var]
                 else:
@@ -399,7 +402,10 @@ class CMIPExperiment(Experiment):
     def variables(self):
         return super().variables + self._drs.get('variable_id', [])
 
-    def load_variable(self, var, chunks={}):
+    def load_variable(self, var, chunks={}, decode_times=None):
+        if decode_times is False:
+            self._decode_times = False
+        
         if not self._drs :
             self._drs = load_cmip6_output(self.path)
 
@@ -414,7 +420,7 @@ class CMIPExperiment(Experiment):
         fname   = get_filename_from_drs(var, {k: [var_drs[k][var_ind]] for k in var_drs})
 
         abspath = os.path.join(self.path, fname[0])
-        ds = xr.open_dataset(abspath, chunks=chunks)
+        ds = xr.open_dataset(abspath, chunks=chunks, decode_times=decode_times)
 
         # -- concat time_range if necessary
         for tr in var_tr[1:]:
@@ -422,7 +428,7 @@ class CMIPExperiment(Experiment):
             fname   = get_filename_from_drs(var, {k: [var_drs[k][i]] for k in var_drs})
 
             abspath = os.path.join(self.path, fname[0])
-            new_ds  = xr.open_dataset(abspath, chunks=chunks)
+            new_ds  = xr.open_dataset(abspath, chunks=chunks, decode_times=decode_times)
 
             ds      = xr.concat( (ds, new_ds), dim='time')
         

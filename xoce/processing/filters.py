@@ -49,9 +49,30 @@ class AverageFilter(XoceObject):
 
         coords = ds.coords
 
+        # compute index min/max for the period (not always used)
+        try:
+            i_min   = np.argmin(np.abs(ds[self.dim] - period[0]).data)
+            i_max   = np.argmin(np.abs(ds[self.dim] - period[1]).data)
+            indexes = (i_min, i_max)
+        except TypeError:
+            indexes = (None, None)
+
         if not self.inverse:
             coords = {c: ds.coords[c] for c in ds.coords if c != self.dim}
-            cmean  = ds[self.dim].sel({self.dim: slice(*period)}).mean(dim=self.dim)
+            
+            # select coordinates over the period
+            try:
+                cperiod  = ds[self.dim].sel({self.dim: slice(*period)})
+            except Exception as e:
+                print(e)
+                if self.dim == 'time':
+                    cperiod  = ds[self.dim].isel({self.dim: slice(*indexes)})
+                else:
+                    raise Exception(e)
+
+            # averaging the selected coordinates
+            cmean = cperiod.mean(dim=self.dim)
+
             if cmean.dtype.type == np.datetime64:
                 newdim = xr.IndexVariable(self.dim, [cmean.data])
             else:
@@ -67,7 +88,18 @@ class AverageFilter(XoceObject):
                 continue
 
             if not (v in ds.coords) and self.dim in ds[v].dims:
-                vmean  = ds[v].sel({self.dim: slice(*period)}).mean(dim=self.dim)
+                # select the variable datas over the period
+                try:
+                    vperiod  = ds[v].sel({self.dim: slice(*period)})
+                except Exception as e:
+                    print(e)
+                    if self.dim == 'time':
+                        vperiod = ds[v].isel({self.dim: slice(*indexes)})
+                    else:
+                        raise Exception(e)
+
+                # averaging selected datas
+                vmean  = vperiod.mean(dim=self.dim)
 
                 if self.inverse:
                     narray = ds[v] - vmean.load()

@@ -225,11 +225,13 @@ def fill_orca_grid(lons, lats, values, xmap, qmesh, phimax=89.9):
 
     if elons:
         xmap.pcolormesh(np.array(elons), np.array(elats), np.array(evals), 
-                        vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm, 
+                        cmap=qmesh.cmap, norm=qmesh.norm, 
+                        #vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm, 
                         shading='auto', transform=ccrs.PlateCarree())
     if wlons:
         xmap.pcolormesh(np.array(wlons), np.array(wlats), np.array(wvals),
-                        vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm,
+                        cmap=qmesh.cmap, norm=qmesh.norm,
+                        #vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm,
                         shading='auto', transform=ccrs.PlateCarree())
 
     # avoid longitude discontinuity
@@ -240,7 +242,8 @@ def fill_orca_grid(lons, lats, values, xmap, qmesh, phimax=89.9):
         nvals = values[:, 0].reshape((nb_lats, 1))
 
         xmap.pcolormesh(nlons, nlats, nvals, 
-                        vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm, 
+                        cmap=qmesh.cmap, norm=qmesh.norm, 
+                        #vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm, 
                         shading='auto', transform=ccrs.PlateCarree())
 
         nlons = np.ones((nb_lats, 2)) * 180.5
@@ -249,7 +252,8 @@ def fill_orca_grid(lons, lats, values, xmap, qmesh, phimax=89.9):
         nvals = values[:, -1].reshape((nb_lats, 1))
         
         xmap.pcolormesh(nlons, nlats, nvals, 
-                        vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm, 
+                        cmap=qmesh.cmap, norm=qmesh.norm, 
+                        #vmin=vmin, vmax=vmax, cmap=qmesh.cmap, norm=qmesh.norm, 
                         shading='auto', transform=ccrs.PlateCarree())
 
     return None
@@ -290,8 +294,8 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
         vbounds = (colorbar.vmin, colorbar.vmax)
 
     xmap.coastlines()
-    xmap.background_patch.set_facecolor(bcg)
-
+    #xmap.background_patch.set_facecolor(bcg)
+	
     if glines:
         xmap.gridlines()
 
@@ -309,9 +313,14 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
         coef_y = 0.15
 
     # plot data
-    qmesh = xmap.pcolormesh(lons[:, :], lats[:, :], values[:, :], vmin=vbounds[0], 
-                            vmax=vbounds[1], cmap=cmap, norm=norm, shading=shading, 
-                            transform=ccrs.PlateCarree())
+    if norm is not None:
+        qmesh = xmap.pcolormesh(lons[:, :], lats[:, :], values[:, :], 
+                                cmap=cmap, norm=norm, shading=shading, 
+                                transform=ccrs.PlateCarree())
+    else:
+        qmesh = xmap.pcolormesh(lons[:, :], lats[:, :], values[:, :], vmin=vbounds[0], 
+                                vmax=vbounds[1], cmap=cmap, shading=shading, 
+                                transform=ccrs.PlateCarree())
 
     if orca_grid:
         fill_orca_grid(lons[:, :], lats[:, :], values[:, :], xmap, qmesh)

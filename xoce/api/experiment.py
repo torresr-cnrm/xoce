@@ -163,7 +163,7 @@ class Experiment:
 
     @property
     def variables(self):
-        return list(self._arrays) + list(self._mesh) + list(self.coords)  
+        return list( set( list(self._arrays) + list(self._mesh) + list(self.coords) ) ) 
 
 
     def calculate(self, var):
@@ -400,7 +400,7 @@ class CMIPExperiment(Experiment):
 
     @property
     def variables(self):
-        return super().variables + self._drs.get('variable_id', [])
+        return list( set( super().variables + self._drs.get('variable_id', []) ) )
 
     def load_variable(self, var, chunks={}, decode_times=None):
         if decode_times is False:

@@ -94,7 +94,7 @@ class H5pyWriter(XoceObject):
                             arr[co] = arr.indexes[co].to_datetimeindex()
                             dtype   = h5py.opaque_dtype(arr[co].dtype)
                        
-                        except ValueError:
+                        except (AttributeError, ValueError):
                             dat     = np.arange(arr.size).reshape(arr.shape)
                             dat     = dat.astype(dtype='datetime64[s]')
                             arr     = arr.assign_coords( {co: datetime_to_cftime(dat)} )

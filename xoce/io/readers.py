@@ -3,6 +3,7 @@
 
 import h5py
 import os
+import numpy  as np
 import xarray as xr
 
 from ..api.generic import XoceObject
@@ -96,7 +97,10 @@ class H5pyReader(XoceObject):
                             cdims = [str(d) for d in cdims]
                         else:
                             cdims = [cname]
-                            
+
+                        if not isinstance(cdats, (list, np.ndarray)):
+                            cdats = np.array([cdats])
+
                         coords[cname] = xr.DataArray(cdats, name=cname, dims=cdims)
 
                         if cname not in ds.coords:
@@ -104,6 +108,20 @@ class H5pyReader(XoceObject):
 
                 else:
                     coords = None
+                
+                if not isinstance(datas, (list, np.ndarray)):
+                    datas = np.array([datas])
+                    dims  = tuple(list(coords))
+                    if len(dims) == 0:
+                        dims = (v,)
+                
+                co2del = list()
+                for co in coords:
+                    for d in coords[co].dims:
+                        if d not in dims:
+                            co2del.append(co)
+                for co in co2del:
+                    del coords[co]
 
                 da = xr.DataArray(datas, coords=coords, dims=dims)
                 try:

@@ -76,7 +76,7 @@ class Experiment:
             for d in array.dims :
                 c = _DIM_COORDINATES.get(d, d)
                 if c in self.coords:
-                    if not np.alltrue(array[d].data == self.coords[c][d].data):
+                    if not np.all(array[d].data == self.coords[c][d].data):
                         array = array.interp(**{d: self.coords[c]}, method=method,
                                             kwargs={"fill_value": "extrapolate"})
 
@@ -191,7 +191,7 @@ class Experiment:
                     var_shpe = np.delete(self[v].shape, skpd)
                     shpe     = np.take(list(self.dims.values()), indx)
                     
-                    if np.alltrue(shpe == var_shpe):
+                    if np.all(shpe == var_shpe):
                         if drop:
                             arr = self[v].where(conds, drop=drop)
                         else:

@@ -48,23 +48,26 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
     ax.set_title(title)
     ax.set_facecolor(bcg)
 
-    # create axe for the colorbar
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="3%", pad=0.2)
-
     # X axis - latitudes
     ax.set_xlim((-80, 80))
     ax.set_xticks([-60, -30, 0, 30, 60])
     ax.set_xticklabels(['60S', '30S', '0', '30N', '60N'])
     ax.set_xlabel(axes_labels[0])
 
-    # Y axis - depth
+    # -- cax
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="3%", pad=0.2)
+
+    # Y axis - depth   
     if yscale == 'voldoire':
         # top axis (0-1000m)
         top = divider.append_axes("top", size="50%", pad=0., sharex=ax)        
         top.set_ylim(0, 1000)
         top.set_yticks([0, 500])
-        top.xaxis.set_tick_params(labelbottom=False)
+        top.xaxis.set_tick_params(labelbottom=False, bottom=False)
+        #
+        top.spines['bottom'].set_linewidth(.5)
+        ax.spines['top'].set_linewidth(0.)
 
         top.set_facecolor(bcg)
         top.invert_yaxis()
@@ -73,7 +76,8 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
         vals = np.take(values, indices=np.where(depth < 1000)[0], axis=0)
         levs = np.take(depth,  indices=np.where(depth < 1000)[0], axis=0)
 
-        vals = np.concatenate([vals, np.take(vals, indices=[-1], axis=0)], axis=0)
+        inte = np.concatenate([np.interp([1000.], depth, values[:,i]) for i in range(values.shape[1])])
+        vals = np.concatenate([vals, inte.reshape(1,len(inte))], axis=0)
         levs = np.concatenate([levs, [1000]], axis=0)
         
         if smooth:
@@ -86,7 +90,8 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
         values = np.take(values, indices=np.where(~(depth < 1000))[0], axis=0)
         depth  = np.take(depth,  indices=np.where(~(depth < 1000))[0], axis=0)
 
-        values = np.concatenate([values, np.take(values, indices=[0], axis=0)], axis=0)
+        #values = np.concatenate([values, np.take(values, indices=[0], axis=0)], axis=0)
+        values = np.concatenate([np.take(vals, indices=[-1], axis=0), values], axis=0)
         depth  = np.concatenate([[1000], depth], axis=0)
         
         # bottom axis (1000-5000m)
@@ -96,6 +101,7 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
         ax.set_xticks([-60, -30, 0, 30, 60])
         ax.set_xticklabels(['60S', '30S', '0', '30N', '60N']) 
     else:
+        top = None
         ax.set_yscale(yscale)
 
     if yscale == 'log':
@@ -117,7 +123,7 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
         im = ax.pcolormesh(lats, depth, values, cmap=cmap, norm=norm,
                            vmin=vbounds[0], vmax=vbounds[1])
 
-    # manage the colorbar
+    # Colorbar
     cax.set_visible(add_cbar)
 
     if colorbar is not None:
@@ -136,7 +142,20 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
                               0.8 * posn.width        , 0.05*posn.height          ])
 
             cax.set_visible(add_cbar)
-    
+
+        elif top is not None:
+            cpos = cax.get_position()
+            cax.set_visible(False)
+
+            labs = [a.get_label() for a in ax.figure.axes]
+            ilab = 0
+            while 'colorbar_id{}'.format(ilab) in labs:
+                ilab += 1
+            lab  = 'colorbar_id{}'.format(ilab)
+            
+            cax  = ax.figure.add_axes([0.9, 0.1, 0.03, cpos.height], label=lab)
+            cax.set_visible(add_cbar)
+
         colorbar.ax  = cax
         colorbar.cax = cax
 

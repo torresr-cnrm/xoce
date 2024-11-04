@@ -1,7 +1,6 @@
 """
 """
 
-import imp
 import numpy as np
 import xarray as xr
 
@@ -322,7 +321,7 @@ def assign_variable(ds, da, name=None, interpolate=True):
     """
     array = da
     for d in da.dims :
-        if d in ds.dims and not np.alltrue(da[d].data == ds[d].data):
+        if d in ds.dims and not np.all(da[d].data == ds[d].data):
             if interpolate:
                 array = array.interp({d:ds[d].data})
             else:

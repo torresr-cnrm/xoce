@@ -91,6 +91,7 @@ def get_variable_data(datas, var, mesh=None, filtering=True, lamtol=100,
         vals = np.array(datas.data)
     else:
         vals = np.array(datas[var])
+    vals.setflags(write=1)
 
     if filtering:
         # 1. get the last longitude
@@ -351,18 +352,21 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
 
             xcb.set_position(cb_position)
 
-        colorbar.ax = xcb
-        colorbar.cax = xcb
-        
         locs, seq = list(), list()
         if 'locs' in colorbar.locator.__dict__:
             locs = colorbar.locator.locs
         if 'seq' in colorbar.formatter.__dict__:
             seq = colorbar.formatter.seq
 
+        colorbar.ax = xcb
+        colorbar.cax = xcb
+
         formatter = colorbar.formatter
 
-        colorbar.update_normal(colorbar.mappable)
+        #colorbar.update_normal(colorbar.mappable)
+        cbar = plt.colorbar(colorbar.mappable, cax=xcb, fraction=1, pad=0, 
+                            extend=colorbar.extend)
+        colorbar.locator.locs
         if list(locs):
             colorbar.set_ticks(locs)
         if list(seq):

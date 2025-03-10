@@ -359,7 +359,7 @@ class SingleDatasetExperiment(Experiment):
 
         # replace some variables values
         for var in replace_dict:
-            newvar = replace_dict[var]   
+            newvar = replace_dict[var]
             inside = (var in ds or var in ds.dims)
             inside = inside & (newvar in ds or newvar in ds.dims)
             if inside:

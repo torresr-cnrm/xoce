@@ -350,6 +350,10 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
                 cb_position[1] = posn.y0 + posn.height + 0.03
 
             xcb.set_position(cb_position)
+            xcb.set_xlabel(colorbar.ax.get_xlabel())
+        
+        else:
+            xcb.set_ylabel(colorbar.ax.get_ylabel())
 
         colorbar.ax = xcb
         colorbar.cax = xcb

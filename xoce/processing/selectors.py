@@ -1,9 +1,7 @@
 """
 """
 
-import numpy  as np
 import xarray as xr
-import xoce.utils.dataset_util as xdsutil
 
 from ..api.generic import XoceObject, set_attrs
 
@@ -63,25 +61,33 @@ class BoxClipper(XoceObject):
 
             conds  = (ds[dim] >= bounds[0])
             conds  = conds & (ds[dim] <= bounds[1])
-            if self.inverse:
-                sliced = ds[dim].where(~conds, drop=self.drop)
-            else:
-                sliced = ds[dim].where(conds, drop=self.drop)
 
-            if len(ds[dim]) > 1:
-                newvar = xr.Variable(ds[dim].dims, sliced.data)
-            else:
-                newvar = xr.IndexVariable(ds[dim].dims, sliced.data)   
-            newvar.attrs = sliced.attrs
+            # -- loop over all coords to resize coordinate variables within the box
+            lcoords = [c for c in ds.coords if c not in ds.dims]
+            for cdim in lcoords:
+                if len(ds[cdim].dims) > 0 and ds[cdim].dims <= ds[dim].dims:
+                    if self.inverse:
+                        sliced = ds[cdim].where(~conds, drop=self.drop)
+                    else:
+                        sliced = ds[cdim].where(conds, drop=self.drop)
 
-            newdim = xr.DataArray(newvar, coords=sliced.coords)
-            newdim.name = dim
+                    if len(ds[cdim]) > 1:
+                        newvar = xr.Variable(ds[cdim].dims, sliced.data)
+                    else:
+                        newvar = xr.IndexVariable(ds[cdim].dims, sliced.data)   
+                    newvar.attrs = sliced.attrs
 
-            coords.update({dim: newdim})
+                    newdim = xr.DataArray(newvar, coords=sliced.coords)
+                    newdim.name = cdim
+
+                    coords.update({cdim: newdim})
 
         selected = xr.Dataset()
         for co in coords:
             selected.coords[co] = coords[co]
+
+        if selected.dims != ds.dims:
+            selected = selected.transpose(*ds.dims)
 
         conds = True
         for dim in self.box:

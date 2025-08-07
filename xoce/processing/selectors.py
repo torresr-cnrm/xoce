@@ -65,7 +65,7 @@ class BoxClipper(XoceObject):
             # -- loop over all coords to resize coordinate variables within the box
             lcoords = [c for c in ds.coords if c not in ds.dims]
             for cdim in lcoords:
-                if len(ds[cdim].dims) > 0 and ds[cdim].dims <= ds[dim].dims:
+                if len(ds[cdim].dims) > 0 and set(ds[cdim].dims) <= set(ds[dim].dims):
                     if self.inverse:
                         sliced = ds[cdim].where(~conds, drop=self.drop)
                     else:

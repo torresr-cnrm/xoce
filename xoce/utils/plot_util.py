@@ -341,6 +341,9 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
     xcb.set_position([posn.x0 + posn.width + 0.02, posn.y0, 0.01, posn.height])
 
     if colorbar is not None:
+        # -- save x and y label
+        xlab, ylab = colorbar.ax.get_xlabel(), colorbar.ax.get_ylabel()
+
         if colorbar.orientation == 'horizontal':
             cb_position = [posn.x0 + 0.1 * posn.width, 
                            posn.y0 - coef_y * posn.height, 
@@ -351,10 +354,6 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
                 cb_position[1] = posn.y0 + posn.height + 0.03
 
             xcb.set_position(cb_position)
-            xcb.set_xlabel(colorbar.ax.get_xlabel())
-        
-        else:
-            xcb.set_ylabel(colorbar.ax.get_ylabel())
 
         locs, seq = list(), list()
         if 'locs' in colorbar.locator.__dict__:
@@ -370,7 +369,6 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
         #colorbar.update_normal(colorbar.mappable)
         cbar = plt.colorbar(colorbar.mappable, cax=xcb, fraction=1, pad=0, 
                             extend=colorbar.extend)
-        colorbar.locator.locs
         if list(locs):
             colorbar.set_ticks(locs)
         if list(seq):
@@ -380,6 +378,9 @@ def plot_carto(lons, lats, values, xmap, cmap='viridis', vbounds=None, norm=None
 
         if colorbar.__dict__.get('position', '') == 'top':
             xcb.xaxis.tick_top()
+
+        xcb.set_xlabel(xlab)
+        xcb.set_ylabel(ylab)
 
     else:
         if cbar_labels:

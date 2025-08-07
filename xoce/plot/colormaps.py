@@ -150,6 +150,9 @@ def get_colorbar(cbnds, cmap='viridis', orientation='vertical', ncolors=None, no
 
     if ticklabels:
         cbar.set_ticklabels(ticklabels)
+
+    if 'label' in kargs:
+        cbar.set_label(kargs['label'])
     
     ipax1.set_visible(False)
 

@@ -303,8 +303,10 @@ def interp_coord(da, coords, dim, method='linear'):
         dup[slicers[1]] = delta_da
         ddw[slicers[0]] = delta_da
 
-        # compute final data 
-        # array = data + coef_up * (dy/dx)_up - coef_down * (dy/dx)_down
+        # compute final data
+        # -- change coords
+        arr.coords[cname] = coords[cname]
+        # -- array = data + coef_up * (dy/dx)_up - coef_down * (dy/dx)_down
         arr.data = da.data  + dco * ( (np.sign(dco) + 1) / 2.) * dup/cup
         arr.data = arr.data - dco * ( (np.sign(dco) - 1) / 2.) * ddw/cdw
 

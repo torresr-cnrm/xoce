@@ -147,6 +147,7 @@ def get_colorbar(cbnds, cmap='viridis', orientation='vertical', ncolors=None, no
 
     cbar = ipfig.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=colormap), 
                           cax=cax, orientation=orientation, **kargs)
+    cbar.minorticks_off()
 
     if ticklabels:
         cbar.set_ticklabels(ticklabels)

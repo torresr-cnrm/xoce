@@ -2,10 +2,12 @@
 Functions to plot 2D graphs.
 """
 
+import matplotlib.colors as clr
 import matplotlib.pyplot as plt
 import numpy             as np
 
 from   mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from   ..utils.grid_util import reggrid
 
 
 def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None, 
@@ -18,33 +20,38 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
         vbounds = (None, None)
     
     # get key arguments
-    smooth  = kargs.get('smooth', False)
-    title = kargs.get('title', '')
-    bcg = kargs.get('bgc', (0.75, 0.75, 0.75))
-    yscale = kargs.get('yscale', 'log')
-    axes_labels = kargs.get('axes_labels', ['',''])
-    cbar_labels = kargs.get('cbar_labels', {})
-    colorbar  = kargs.get('colorbar', None)
-    add_cbar  = kargs.get('add_cbar', True)
-    glines    = kargs.get('gridlines', False)
+    smooth        = kargs.get('smooth', False)
+    title         = kargs.get('title', '')
+    bcg           = kargs.get('bgc', (0.75, 0.75, 0.75))
+    yscale        = kargs.get('yscale', 'log')
+    axes_labels   = kargs.get('axes_labels', ['',''])
+    cbar_labels   = kargs.get('cbar_labels', {})
+    colorbar      = kargs.get('colorbar', None)
+    add_cbar      = kargs.get('add_cbar', True)
+    glines        = kargs.get('gridlines', False)
+    interpolation = kargs.get('interpolation', None)
 
-    # add general information about axis
-    if title:
-        ax.set_title(title)
-
-    # axes for cartography plot
+    # get cmap from name
     if isinstance(cmap, str):
         cmap = plt.cm.get_cmap(cmap)
-    
-    # overwrite properties if a colorbar is given
+
+    # interpolate data on regular grid (required for contourf plot)
+    if smooth and interpolation in ['linear', 'nearest', 'cubic']:
+        (lats, depth), values = reggrid(xref=lats, yref=depth, values=values, nbx=200, interpolation=interpolation)
+
+    # overwrite properties if a colorbar and norm is given
     if colorbar is not None:
         cmap = colorbar.cmap
         norm = colorbar.norm
         vbounds = (colorbar.vmin, colorbar.vmax)
-        clevels = len(colorbar._values) - 1
+        clevels = np.linspace(vbounds[0], vbounds[1], len(colorbar._values) - 1)
     else:
         clevels = None
 
+    if norm is None:
+        norm    = clr.Normalize(vmin=vbounds[0], vmax=vbounds[1])
+
+    # set axe properties
     ax.set_title(title)
     ax.set_facecolor(bcg)
 
@@ -81,11 +88,9 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
         levs = np.concatenate([levs, [1000]], axis=0)
         
         if smooth:
-            _ = top.contourf(lats, levs, vals, cmap=cmap, levels=clevels,
-                            vmin=vbounds[0], vmax=vbounds[1])
+            _ = top.contourf(lats, levs, vals, cmap=cmap, levels=clevels, norm=norm, extend='both')
         else:
-            _ = top.pcolormesh(lats, levs, vals, cmap=cmap, norm=norm,
-                            vmin=vbounds[0], vmax=vbounds[1])
+            _ = top.pcolormesh(lats, levs, vals, cmap=cmap, norm=norm)
 
         values = np.take(values, indices=np.where(~(depth < 1000))[0], axis=0)
         depth  = np.take(depth,  indices=np.where(~(depth < 1000))[0], axis=0)
@@ -117,11 +122,9 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
 
     # plot data
     if smooth:
-        im = ax.contourf(lats, depth, values, cmap=cmap, levels=clevels,
-                         vmin=vbounds[0], vmax=vbounds[1])
+        im = ax.contourf(lats, depth, values, cmap=cmap, levels=clevels, norm=norm, extend='both')
     else:
-        im = ax.pcolormesh(lats, depth, values, cmap=cmap, norm=norm,
-                           vmin=vbounds[0], vmax=vbounds[1])
+        im = ax.pcolormesh(lats, depth, values, cmap=cmap, norm=norm)
 
     # Colorbar
     cax.set_visible(add_cbar)
@@ -184,3 +187,5 @@ def plot_depth_zonal_mean(lats, depth, values, ax, cmap='viridis', vbounds=None,
             cbar = plt.colorbar(im, cax=cax, fraction=1, pad=0)
 
     plt.close()
+
+    return lats, depth, values

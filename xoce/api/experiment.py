@@ -19,7 +19,7 @@ from . import _DIM_COORDINATES, _VARS_NAME
 
 
 class Experiment:
-    def __init__(self, path=None, interpolation='linear'):
+    def __init__(self, path=None, interpolation=None):
         self.path  = path 
         self.fmesh = None
 
@@ -34,7 +34,7 @@ class Experiment:
         self._calc = CalcManager(dataset=self)    # instance to compute off-line diag.
 
         # loading and array options
-        self.interpolation = interpolation
+        self.interpolation = interpolation        # None, or any xarray method (see DataArray.interp)
         self._dtype        = None                 # numerical data type (eg: float)
         self._decode_times = None                 # decode dim 'times' when loading files
         self._unused_dims  = list()
@@ -68,23 +68,10 @@ class Experiment:
             if dim in array.dims:
                 array = array.isel({dim:0})
 
-        # interpolation if needed  
-        if not self.interpolation:
-            return array
-        else:
-            method = self.interpolation
-            for d in array.dims :
-                c = _DIM_COORDINATES.get(d, d)
-                if c in self.coords:
-                    if not np.all(array[d].data == self.coords[c][d].data):
-                        array = array.interp(**{d: self.coords[c]}, method=method,
-                                            kwargs={"fill_value": "extrapolate"})
-
         self.add_variable(var, array)
         array = self.arrays[var]
         
         if self.dtype and array.dtype != self.dtype:
-            print(array.name, self.dtype)
             try:
                 array = array.astype(self.dtype)
             except TypeError:
@@ -265,6 +252,15 @@ class Experiment:
 
             if arr.name in _VARS_NAME[type(self).__name__]:
                 arr.name = _VARS_NAME[type(self).__name__][arr.name]
+
+        # interpolation if needed  
+        if self.interpolation:
+            for d in arr.dims :
+                c = _DIM_COORDINATES.get(d, d)
+                if c in self.coords:
+                    if not np.all(arr[d].data == self.coords[c][d].data):
+                        arr = arr.interp(**{d: self.coords[c]}, method=self.interpolation,
+                                            kwargs={"fill_value": "extrapolate"})
 
         if newvar not in list(self.arrays):
             self.arrays[newvar] = arr

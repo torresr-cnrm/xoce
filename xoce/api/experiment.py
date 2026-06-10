@@ -25,6 +25,7 @@ class Experiment:
 
         # core dataset properties
         self._dims   = dict()
+        self._sizes  = dict()
         self._coords = dict()
         self._attrs  = dict()
         self._chunks = None                       # dask chunks to split large datasets
@@ -50,7 +51,7 @@ class Experiment:
                 array = self.coords[var]
             else:
                 lres = self.load_variable(var, chunks=self._chunks, 
-                                               decode_times=self._decode_times)
+                                            decode_times=self._decode_times)
                 if lres is not None:
                     array = self.arrays[var]
                 else:
@@ -341,6 +342,7 @@ class SingleDatasetExperiment(Experiment):
         self._arrays = ds
         self._coords = ds.coords
         self._dims   = ds.dims
+        self._sizes  = ds.sizes
 
     # abstract method(s) definition
     def load(self, chunks={}, replace_dict={}):
@@ -399,8 +401,8 @@ class CMIPExperiment(Experiment):
         return list( set( super().variables + self._drs.get('variable_id', []) ) )
 
     def load_variable(self, var, chunks={}, decode_times=None):
-        if decode_times is False:
-            self._decode_times = False
+        if decode_times is not None:
+            self._decode_times = decode_times
         
         if not self._drs :
             self._drs = load_cmip6_output(self.path)
@@ -426,12 +428,12 @@ class CMIPExperiment(Experiment):
             abspath = os.path.join(self.path, fname[0])
             new_ds  = xr.open_dataset(abspath, chunks=chunks, decode_times=decode_times)
 
-            ds      = xr.concat( (ds, new_ds), dim='time')
+            ds      = xr.concat( (ds, new_ds), dim='time', data_vars='all')
         
         # update experiment dims and coords
         for d in ds.dims:
             if d not in self.dims:
-                self._dims[d] = ds.dims[d]
+                self._sizes[d] = ds.sizes[d]
         
         for c in ds.coords:
             if c not in self.coords:

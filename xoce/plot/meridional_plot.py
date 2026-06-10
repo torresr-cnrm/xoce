@@ -2,6 +2,7 @@
 Functions to plot 2D graphs.
 """
 
+import copy
 import matplotlib.colors as clr
 import matplotlib.pyplot as plt
 import numpy             as np

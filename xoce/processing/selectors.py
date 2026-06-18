@@ -154,3 +154,47 @@ class FieldSelector(XoceObject):
         return selected
 
 
+
+class SectionCut(XoceObject):
+    """
+    Cutter for selecting data on a section.
+    """
+    _Parameters = {
+        "variables": {'type': list,
+                      'default': ['uo', 'vo']},
+    }
+
+    def __init__(self, dataset=None, **kargs):
+        XoceObject.__init__(self, dataset)
+        
+        # add default processing parameter
+        self._set_default_parameters(**kargs)
+
+
+    @set_attrs
+    def execute(self):
+        ds = self.dataset
+
+        for var in self.variables:
+            if var not in ds.variables:
+                raise Exception("Selector error: '{}' ".format(var) + 
+                        "is not in dataset coordinates ()".format(list(ds.variables)))
+
+        newcoords = list()
+        selected = xr.Dataset(coords=ds.coords)
+
+        for var in self.variables:
+            selected[var] = ds[var]
+
+            for co in selected[var].coords:
+                if co not in newcoords:
+                    newcoords.append(co)
+
+        # filter coordinates in selected variables
+        for co in selected.coords:
+            if co not in newcoords:
+                del selected.coords[co]
+        
+        return selected
+
+

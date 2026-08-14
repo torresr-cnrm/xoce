@@ -243,8 +243,11 @@ class NEMOGridCutter(XoceObject):
 
                 # get new coordinates
                 new_coords   = dict(da.coords)
-                del new_coords['latitude']
-                del new_coords['longitude']
+                
+                if 'latitude' in new_coords:
+                    del new_coords['latitude']
+                if 'longitude' in new_coords:
+                    del new_coords['longitude']
 
                 new_coords['latitude']  = coords['latitude']
                 new_coords['longitude'] = coords['longitude']

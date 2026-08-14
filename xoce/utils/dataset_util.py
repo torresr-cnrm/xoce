@@ -48,12 +48,12 @@ def concatenate_arrays(larrays, dim, chunks=None):
     if chunks is None:
         arr = arr.chunk({}).load()
     else:
-        arr = arr.chunk(chunks)
+        arr = arr.chunk({arr.dims[i]: chunks[i] for i in range(len(arr.dims))})
 
     return arr
 
 
-def array_diff(da, dim='time', method='forward'):
+def array_diff(da, dim='time', method='forward', overlap=None):
     """
     Make a diff operation under a DataArray object along one dimension.
     The method argument is set to 'forward' differentiation by default.
@@ -69,8 +69,12 @@ def array_diff(da, dim='time', method='forward'):
         daa.coords[dim] = dab.coords[dim]
 
         dif = daa - dab
-        lst = dif.isel({dim: [-1]})
-        lst.coords[dim] = [da.coords[dim][-1]]
+        if overlap:
+            lst = da.isel({dim: [0+overlap]}) - da.isel({dim: [-1]})
+            lst.coords[dim] = [da.coords[dim][-1]]
+        else:
+            lst = dif.isel({dim: [-1]})
+            lst.coords[dim] = [da.coords[dim][-1]]
         arr.data = concatenate_arrays([dif, lst], dim=dim, chunks=da.chunks).data
 
     elif method == 'backward':
@@ -79,8 +83,12 @@ def array_diff(da, dim='time', method='forward'):
         dab.coords[dim] = daa.coords[dim]
 
         dif = daa - dab
-        fst = dif.isel({dim: [0]})
-        fst.coords[dim] = [da.coords[dim][0]]
+        if overlap:
+            fst = da.isel({dim: [0]}) - da.isel({dim: [-1-overlap]})
+            fst.coords[dim] = [da.coords[dim][0]]
+        else:
+            fst = dif.isel({dim: [0]})
+            fst.coords[dim] = [da.coords[dim][0]]
         arr.data = concatenate_arrays([fst, dif], dim=dim, chunks=da.chunks).data
 
     elif method == 'centered':

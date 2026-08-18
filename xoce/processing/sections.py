@@ -156,18 +156,14 @@ class NEMOGridCutter(XoceObject):
         section = xr.Dataset(coords=coords)
 
         # Get x and y indices from the serie of waypoints
-        #  -- note that xsign and ysign are computed assuming a constant section slope
         index_x  = np.array(list_pts_ij)[:,0]
         index_y  = np.array(list_pts_ij)[:,1]
 
-        ix0      = index_x[0]
-        iy0      = index_y[0]
+        ix0      = index_x[np.argmin(index_x)]
+        iy0      = index_y[np.argmin(index_y)]
 
-        xsign    = int(np.sign(np.min(index_x-ix0)+0.5))
-        ysign    = int(np.sign(np.min(index_y-iy0)+0.5))
-
-        indx     = np.abs(index_x - ix0)[::xsign]
-        indy     = np.abs(index_y - iy0)[::ysign]
+        indx     = np.abs(index_x - ix0)
+        indy     = np.abs(index_y - iy0)
 
 
         # ----------------------------------------------------------------------------------
@@ -236,8 +232,8 @@ class NEMOGridCutter(XoceObject):
                                  + signu * 0.5 * (da.isel({'x': ix, 'y': iy}) + da.isel({'x': ix,   'y': iy+1})).data      
 
                     if 'lgthcello' not in section.variables and set(('e1v', 'e2u')) <= set(ds.variables):
-                        lgth[...,k] = np.abs(signv) * ds['e1v'].isel({'x': ix0+xsign*ix, 'y': iy0+ysign*iy}).data \
-                                    +        signu  * ds['e2u'].isel({'x': ix0+xsign*ix, 'y': iy0+ysign*iy}).data
+                        lgth[...,k] = np.abs(signv) * ds['e1v'].isel({'x': ix0+ix, 'y': iy0+iy}).data \
+                                    +        signu  * ds['e2u'].isel({'x': ix0+ix, 'y': iy0+iy}).data
 
                     k += 1
 
